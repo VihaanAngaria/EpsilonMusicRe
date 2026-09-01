@@ -219,14 +219,22 @@ Download the latest pre-compiled APK from the [Releases Page](https://github.com
 
 ## iOS App
 
-Epsilon Music also ships a **native iOS app** (SwiftUI) in [`ios/`](ios/) — same logo, dark surfaces and red accent, with Home / Library / full-screen Player, lock-screen controls, and playback of your device music library (plus bundled demo tracks). The project file is generated with [XcodeGen](https://github.com/yonaskolb/XcodeGen):
+Epsilon Music also ships a **native iOS app** (SwiftUI) in [`ios/`](ios/) that mirrors the Android app's design and core experience:
+
+- **YouTube Music streaming** — a Swift port of the `innertube` module talks to the same InnerTube API (search, home feed, playlists, albums, artists, radio), and resolves progressive audio streams with the same client fallback order as Android (ANDROID_VR → IOS).
+- **Same tabs** — Home / Search / Listen Together / Library, in the Android order.
+- **Full player** — swipeable pages (Up next • Artwork • Related), synced lyrics (LRCLIB) with tap-to-seek, shuffle/repeat, sleep timer, mini player, lock-screen & Control Center controls.
+- **Library** — liked songs, local playlists (create/rename/reorder), play history, top tracks, on-device music import, Explore and Moods & genres.
+- **Theming** — pure-black/dark/light, MaterialKolor-style dynamic accent from the current artwork, and the Android accent color palette.
+
+The project file is generated with [XcodeGen](https://github.com/yonaskolb/XcodeGen):
 
 ```bash
 brew install xcodegen
 cd ios && xcodegen generate && open EpsilonMusicRe.xcodeproj
 ```
 
-See [`ios/README.md`](ios/README.md) for details. iOS CI builds the app for the simulator on every `ios/` change.
+See [`ios/README.md`](ios/README.md) for details. iOS CI builds the app for the simulator on every `ios/` change. Account sign-in, downloads, equalizer, music recognition and Listen-Together hosting remain Android-only for now (see the iOS app's Settings → About).
 
 ---
 
