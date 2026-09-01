@@ -211,7 +211,7 @@ final class EqualizerEngine: ObservableObject {
         if activePresetId == id { activePresetId = nil }
     }
 
-    private static func loadCustomProfiles() -> [EQProfile] {
+    static func loadCustomProfiles() -> [EQProfile] {
         guard let data = UserDefaults.standard.data(forKey: "eq_custom_profiles"),
               let profiles = try? JSONDecoder().decode([EQProfile].self, from: data) else { return [] }
         return profiles

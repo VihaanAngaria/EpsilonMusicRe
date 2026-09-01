@@ -6,15 +6,22 @@ enum Route: Hashable {
     case settings
     case explore
     case moods
+    case charts
+    case newReleases
     case liked
     case history
     case topTracks
+    case stats
     case localSongs
     case offline
+    case downloaded
+    case recognition
+    case spotifyImport
     case localPlaylist(String)
     case onlinePlaylist(PlaylistItem)
     case album(AlbumItem)
     case artist(ArtistItem)
+    case browse(title: String, browseId: String, params: String?)
 }
 
 // MARK: - Palette environment
@@ -39,6 +46,16 @@ struct RootView: View {
     @EnvironmentObject private var settings: AppSettings
     @EnvironmentObject private var library: LibraryStore
     @EnvironmentObject private var player: PlayerManager
+    @EnvironmentObject private var account: AccountManager
+    @EnvironmentObject private var downloads: DownloadManager
+    @EnvironmentObject private var recognition: RecognitionManager
+    @EnvironmentObject private var lt: ListenTogetherClient
+    @EnvironmentObject private var discord: DiscordPresence
+    @EnvironmentObject private var scrobbler: Scrobbler
+    @EnvironmentObject private var spotify: SpotifyImporter
+    @EnvironmentObject private var updater: Updater
+    @EnvironmentObject private var eq: EqualizerEngine
+    @EnvironmentObject private var ai: AIClient
     @Environment(\.colorScheme) private var colorScheme
 
     @State private var selectedTab = 0
@@ -88,8 +105,15 @@ struct RootView: View {
                 .environmentObject(settings)
                 .environmentObject(library)
                 .environmentObject(player)
+                .environmentObject(account)
+                .environmentObject(downloads)
+                .environmentObject(eq)
+                .environmentObject(ai)
                 .environment(\.epsPalette, palette)
                 .preferredColorScheme(isDark ? .dark : .light)
+        }
+        .onAppear {
+            // The persisted queue is restored paused (Android onCreate parity).
         }
     }
 

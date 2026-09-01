@@ -7,7 +7,7 @@ final class Updater: ObservableObject {
 
     static let shared = Updater()
 
-    struct UpdateInfo: Equatable {
+    struct UpdateInfo {
         var version: String
         var downloadUrl: String?
         var downloadSize: Int?

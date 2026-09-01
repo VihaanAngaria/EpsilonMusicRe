@@ -8,23 +8,38 @@ struct HomeView: View {
     @EnvironmentObject private var player: PlayerManager
     @EnvironmentObject private var library: LibraryStore
     @EnvironmentObject private var settings: AppSettings
+    @EnvironmentObject private var account: AccountManager
+    @EnvironmentObject private var recognition: RecognitionManager
     @Environment(\.epsPalette) private var pal
 
     @State private var shelves: [Shelf] = []
     @State private var isLoading = true
     @State private var loadError: String?
+    @State private var showWelcome = false
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 4, pinnedViews: []) {
                     NavigationTitleBar(title: "Epsilon Music", showLogo: true) {
-                        NavigationLink(value: Route.settings) {
-                            Image(systemName: "gearshape")
-                                .font(.system(size: 18, weight: .medium))
-                                .foregroundStyle(pal.textSecondary)
+                        HStack(spacing: 14) {
+                            NavigationLink(value: Route.recognition) {
+                                Image(systemName: "waveform.badge.magnifyingglass")
+                                    .font(.system(size: 17, weight: .medium))
+                                    .foregroundStyle(pal.textSecondary)
+                            }
+                            .buttonStyle(.plain)
+                            NavigationLink(value: Route.settings) {
+                                Image(systemName: "gearshape")
+                                    .font(.system(size: 18, weight: .medium))
+                                    .foregroundStyle(pal.textSecondary)
+                            }
+                            .buttonStyle(.plain)
+                            NavigationLink(value: Route.settings) {
+                                accountAvatar
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
 
                     exploreShortcuts
@@ -57,9 +72,40 @@ struct HomeView: View {
             }
             .background(pal.background.ignoresSafeArea())
             .navigationDestination(for: Route.self) { route in
-                routeDestination(route)
+                RouteDestination(route: route)
             }
             .task { reloadIfNeeded() }
+            .alert("Welcome to Epsilon Music", isPresented: $showWelcome) {
+                Button("Start listening") {}
+            } message: {
+                Text("Sign in from Settings → Account to sync your library, or start exploring right away.")
+            }
+            .onAppear {
+                if !UserDefaults.standard.bool(forKey: "welcomeShown") {
+                    UserDefaults.standard.set(true, forKey: "welcomeShown")
+                    showWelcome = true
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var accountAvatar: some View {
+        if account.isLoggedIn, let photo = account.accountPhoto {
+            AsyncImage(url: URL(string: photo)) { phase in
+                if let image = phase.image {
+                    image.resizable().scaledToFill()
+                } else {
+                    Image(systemName: "person.crop.circle.fill")
+                }
+            }
+            .frame(width: 26, height: 26)
+            .clipShape(Circle())
+            .foregroundStyle(pal.textSecondary)
+        } else {
+            Image(systemName: "person.crop.circle")
+                .font(.system(size: 18, weight: .medium))
+                .foregroundStyle(pal.textSecondary)
         }
     }
 
@@ -71,13 +117,25 @@ struct HomeView: View {
                 shortcutTile(icon: "square.grid.2x2.fill", title: "Explore")
             }
             .buttonStyle(.plain)
-            NavigationLink(value: Route.moods) {
-                shortcutTile(icon: "face.smiling.inverse", title: "Moods & genres")
+            NavigationLink(value: Route.charts) {
+                shortcutTile(icon: "chart.bar.fill", title: "Charts")
             }
             .buttonStyle(.plain)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
+        HStack(spacing: 12) {
+            NavigationLink(value: Route.moods) {
+                shortcutTile(icon: "face.smiling.inverse", title: "Moods & genres")
+            }
+            .buttonStyle(.plain)
+            NavigationLink(value: Route.newReleases) {
+                shortcutTile(icon: "sparkles", title: "New releases")
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 16)
+        .padding(.bottom, 8)
     }
 
     private func shortcutTile(icon: String, title: String) -> some View {
@@ -228,21 +286,7 @@ struct HomeView: View {
 
     // MARK: Routing
 
-    @ViewBuilder
     private func routeDestination(_ route: Route) -> some View {
-        switch route {
-        case .settings: SettingsView()
-        case .explore: ExploreView()
-        case .moods: MoodsView()
-        case .liked: LikedSongsView()
-        case .history: HistoryView()
-        case .topTracks: TopTracksView()
-        case .localSongs: LocalSongsView()
-        case .offline: OfflineView()
-        case .localPlaylist(let id): LocalPlaylistView(playlistId: id)
-        case .onlinePlaylist(let item): OnlinePlaylistView(item: item)
-        case .album(let item): AlbumView(item: item)
-        case .artist(let item): ArtistView(item: item)
-        }
+        RouteDestination(route: route)
     }
 }

@@ -539,8 +539,10 @@ final class InnerTube {
                     } else if let nav = JSON.dig(gi, "musicNavigationButtonRenderer") {
                         let text = JSON.asString(JSON.dig(nav, "buttonText"))
                         let bid = JSON.asString(JSON.dig(nav, "navigationEndpoint", "browseEndpoint", "browseId"))
+                        let navParams = JSON.asString(JSON.dig(nav, "navigationEndpoint", "browseEndpoint", "params"))
+                            ?? JSON.asString(JSON.dig(nav, "clickCommand", "browseEndpoint", "params"))
                         if let text = text, let bid = bid {
-                            items.append(.playlist(PlaylistItem(browseId: bid, title: text, owner: nil, countText: nil, thumbnail: nil, isLocal: false)))
+                            items.append(.playlist(PlaylistItem(browseId: bid, title: text, owner: nil, countText: nil, thumbnail: nil, isLocal: false, params: navParams)))
                         }
                     }
                 }

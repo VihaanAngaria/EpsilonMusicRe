@@ -126,10 +126,14 @@ struct LibraryView: View {
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible())], spacing: 12) {
             gridTile(icon: "heart.fill", accentIcon: true, title: "Liked songs", countText: "\(library.likedSongs.count) songs", route: .liked)
             gridTile(icon: "chart.line.uptrend.xyaxis", title: "My top tracks", countText: "\(library.topSongs(limit: 100).count) songs", route: .topTracks)
+            gridTile(icon: "arrow.down.circle.fill", accentIcon: true, title: "Downloaded", countText: "\(library.downloadedIds.count) songs", route: .downloaded)
+            gridTile(icon: "chart.bar.fill", title: "Stats", countText: formatListenTime(library.totalPlayTime), route: .stats)
             gridTile(icon: "arrow.down.circle.fill", title: "Offline / demo", countText: "\(library.localSongs.filter { $0.isDemo }.count) songs", route: .offline)
             gridTile(icon: "folder.fill", title: "On this device", countText: "\(library.localSongs.filter { !$0.isDemo }.count) songs", route: .localSongs)
             }
             .padding(.horizontal, 16)
+
+            LibrarySyncSection()
 
             VStack(alignment: .leading, spacing: 8) {
                 SectionHeader(title: "Playlists", trailingText: "\(library.playlists.count)")
@@ -341,19 +345,6 @@ struct LibraryView: View {
 
     @ViewBuilder
     private func destinationView(_ route: Route) -> some View {
-        switch route {
-        case .settings: SettingsView()
-        case .explore: ExploreView()
-        case .moods: MoodsView()
-        case .liked: LikedSongsView()
-        case .history: HistoryView()
-        case .topTracks: TopTracksView()
-        case .localSongs: LocalSongsView()
-        case .offline: OfflineView()
-        case .localPlaylist(let id): LocalPlaylistView(playlistId: id)
-        case .onlinePlaylist(let item): OnlinePlaylistView(item: item)
-        case .album(let item): AlbumView(item: item)
-        case .artist(let item): ArtistView(item: item)
-        }
+        RouteDestination(route: route)
     }
 }

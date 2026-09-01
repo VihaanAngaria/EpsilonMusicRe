@@ -142,8 +142,18 @@ final class AccountManager: ObservableObject {
         Task { await validateAccount() }
     }
 
+    /// Advanced login data — the Android 6-line token format.
+    struct AdvancedLogin {
+        var cookie: String
+        var visitorData: String?
+        var dataSyncId: String?
+        var name: String?
+        var email: String?
+        var handle: String?
+    }
+
     /// Advanced login — the Android 6-line token format (SAPISID required).
-    static func parseAdvancedLogin(_ text: String) -> (cookie: String, visitorData: String?, dataSyncId: String?, name: String?, email: String?, handle: String?)? {
+    static func parseAdvancedLogin(_ text: String) -> AdvancedLogin? {
         var cookie: String?
         var visitorData: String?
         var dataSyncId: String?
@@ -167,10 +177,10 @@ final class AccountManager: ObservableObject {
             }
         }
         guard let c = cookie, c.contains("SAPISID") else { return nil }
-        return (c, visitorData, dataSyncId, name, email, handle)
+        return AdvancedLogin(cookie: c, visitorData: visitorData, dataSyncId: dataSyncId, name: name, email: email, handle: handle)
     }
 
-    func applyAdvancedLogin(_ parsed: (cookie: String, visitorData: String?, dataSyncId: String?, name: String?, email: String?, handle: String?)) {
+    func applyAdvancedLogin(_ parsed: AdvancedLogin) {
         cookie = parsed.cookie
         visitorData = parsed.visitorData
         dataSyncId = parsed.dataSyncId

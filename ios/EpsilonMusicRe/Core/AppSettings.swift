@@ -15,6 +15,27 @@ enum ThemeMode: String, CaseIterable, Identifiable, Codable {
     }
 }
 
+/// Player background styles (PlayerBackgroundStyle.kt parity).
+enum PlayerBackgroundStyle: String, CaseIterable, Identifiable {
+    case `default`
+    case gradient
+    case blur
+    case glowAnimated
+    case ambient
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .default: return "Default"
+        case .gradient: return "Gradient"
+        case .blur: return "Blurred artwork"
+        case .glowAnimated: return "Glow animated"
+        case .ambient: return "Ambient glow"
+        }
+    }
+}
+
 /// Accent colors matching the Android app's ThemeScreen palette.
 struct AccentOption: Identifiable {
     let name: String
@@ -56,6 +77,37 @@ final class AppSettings: ObservableObject {
         didSet { UserDefaults.standard.set(defaultSearchFilterRaw, forKey: "defaultSearchFilter") }
     }
 
+    // MARK: Player look (Thumbnail.kt / Player.kt preferences)
+    @Published var playerBackgroundStyleRaw: String {
+        didSet { UserDefaults.standard.set(playerBackgroundStyleRaw, forKey: "playerBackgroundStyle") }
+    }
+    @Published var rotatingThumbnail: Bool {
+        didSet { UserDefaults.standard.set(rotatingThumbnail, forKey: "rotatingThumbnail") }
+    }
+    @Published var canvasThumbnail: Bool {
+        didSet { UserDefaults.standard.set(canvasThumbnail, forKey: "canvasThumbnailAnimation") }
+    }
+    @Published var wavySlider: Bool {
+        didSet { UserDefaults.standard.set(wavySlider, forKey: "squigglySlider") }
+    }
+    @Published var showCodecOnPlayer: Bool {
+        didSet { UserDefaults.standard.set(showCodecOnPlayer, forKey: "showCodecOnPlayer") }
+    }
+
+    // MARK: Lyrics & content
+    @Published var romanizeLyrics: Bool {
+        didSet { UserDefaults.standard.set(romanizeLyrics, forKey: "lyricsRomanize") }
+    }
+    @Published var autoTranslateLyrics: Bool {
+        didSet { UserDefaults.standard.set(autoTranslateLyrics, forKey: "autoTranslate") }
+    }
+    @Published var hideLocalInSearch: Bool {
+        didSet { UserDefaults.standard.set(hideLocalInSearch, forKey: "hideLocalInSearch") }
+    }
+    @Published var autoDownloadOnLike: Bool {
+        didSet { UserDefaults.standard.set(autoDownloadOnLike, forKey: "autoDownloadOnLike") }
+    }
+
     private init() {
         let defaults = UserDefaults.standard
         themeModeRaw = defaults.string(forKey: "themeMode") ?? ThemeMode.dark.rawValue
@@ -65,6 +117,20 @@ final class AppSettings: ObservableObject {
         autoplayRelated = defaults.object(forKey: "autoplayRelated") as? Bool ?? true
         skipOnStreamError = defaults.object(forKey: "skipOnStreamError") as? Bool ?? true
         defaultSearchFilterRaw = defaults.string(forKey: "defaultSearchFilter") ?? SearchFilter.songs.rawValue
+        playerBackgroundStyleRaw = defaults.string(forKey: "playerBackgroundStyle") ?? PlayerBackgroundStyle.gradient.rawValue
+        rotatingThumbnail = defaults.object(forKey: "rotatingThumbnail") as? Bool ?? false
+        canvasThumbnail = defaults.object(forKey: "canvasThumbnailAnimation") as? Bool ?? true
+        wavySlider = defaults.object(forKey: "squigglySlider") as? Bool ?? false
+        showCodecOnPlayer = defaults.object(forKey: "showCodecOnPlayer") as? Bool ?? false
+        romanizeLyrics = defaults.object(forKey: "lyricsRomanize") as? Bool ?? true
+        autoTranslateLyrics = defaults.object(forKey: "autoTranslate") as? Bool ?? false
+        hideLocalInSearch = defaults.object(forKey: "hideLocalInSearch") as? Bool ?? false
+        autoDownloadOnLike = defaults.object(forKey: "autoDownloadOnLike") as? Bool ?? false
+    }
+
+    var playerBackgroundStyle: PlayerBackgroundStyle {
+        get { PlayerBackgroundStyle(rawValue: playerBackgroundStyleRaw) ?? .gradient }
+        set { playerBackgroundStyleRaw = newValue.rawValue }
     }
 
     var themeMode: ThemeMode {

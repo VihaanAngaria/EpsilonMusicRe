@@ -502,52 +502,6 @@ struct LikedSongsView: View {
 
 // MARK: - History
 
-struct HistoryView: View {
-    @EnvironmentObject private var player: PlayerManager
-    @EnvironmentObject private var library: LibraryStore
-    @Environment(\.epsPalette) private var pal
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 4) {
-                NavigationTitleBar(title: "History", showBack: true) {
-                    if !library.history.isEmpty {
-                        Button {
-                            library.clearHistory()
-                        } label: {
-                            Text("Clear")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(pal.accent)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                if library.history.isEmpty {
-                    EmptyPlaceholder(icon: "clock.arrow.circlepath", text: "Songs you play will show up here.")
-                } else {
-                    ForEach(library.history) { entry in
-                        let date = Date(timeIntervalSince1970: entry.playedAt)
-                        SongRow(song: entry.song,
-                                isCurrent: player.currentSong?.id == entry.song.id,
-                                subtitleOverride: relativeDate(date)) { tapped, _ in
-                            let songs = library.history.map { $0.song }
-                            player.play(tapped, queue: songs, sourceName: "History")
-                        }
-                    }
-                }
-                Color.clear.frame(height: 96)
-            }
-        }
-        .background(pal.background.ignoresSafeArea())
-    }
-
-    private func relativeDate(_ date: Date) -> String {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .abbreviated
-        return formatter.localizedString(for: date, relativeTo: Date())
-    }
-}
-
 // MARK: - Top tracks
 
 struct TopTracksView: View {
@@ -783,7 +737,11 @@ struct MoodsView: View {
 
     private func moodRoute(_ item: MediaGridItem) -> Route {
         switch item {
-        case .playlist(let p): return .onlinePlaylist(p)
+        case .playlist(let p):
+            if let params = p.params, !params.isEmpty {
+                return .browse(title: p.title, browseId: p.browseId, params: params)
+            }
+            return .onlinePlaylist(p)
         case .album(let a): return .album(a)
         case .artist(let a): return .artist(a)
         case .song: return .explore

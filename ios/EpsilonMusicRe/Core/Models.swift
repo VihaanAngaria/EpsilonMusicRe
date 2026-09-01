@@ -80,6 +80,7 @@ struct PlaylistItem: Identifiable, Codable, Hashable {
     var countText: String?
     var thumbnail: String?
     var isLocal: Bool
+    var params: String? = nil     // mood / genre chip params (browse filter)
 
     var id: String { browseId }
 }
