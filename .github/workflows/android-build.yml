@@ -31,30 +31,89 @@ jobs:
       with:
         cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
-    - name: Decode Keystore
+    - name: Prepare Signing Keystore (verify release secrets, CI-key fallback)
       env:
         ENCODED_KEYSTORE: ${{ secrets.KEYSTORE_BASE64 }}
-      run: |
-        if [ -z "$ENCODED_KEYSTORE" ]; then
-          echo "::error::KEYSTORE_BASE64 secret is not set. The release build cannot be signed."
-          exit 1
-        fi
-        echo "$ENCODED_KEYSTORE" | base64 -di > keystore.jks
-        echo "Keystore decoded successfully."
-        ls -la keystore.jks
-
-    - name: Build Release APK
-      env:
+        STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
         KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+      run: |
+        set -e
+        KS="keystore.jks"
+        SIGN_MODE="release"
+        REASON=""
+
+        if [ -z "$ENCODED_KEYSTORE" ] || [ -z "$STORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then
+          SIGN_MODE="ci"
+          REASON="one or more signing secrets are not set (need KEYSTORE_BASE64, STORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD)"
+        else
+          echo "$ENCODED_KEYSTORE" | base64 -di > "$KS"
+          echo "Keystore decoded: $(stat -c%s "$KS") bytes."
+
+          # Layered verification:
+          #   1. keytool -list  -> STORE_PASSWORD must open the keystore
+          #   2. keytool -alias -> KEY_ALIAS must exist
+          #   3. jarsigner trial-sign (when available) -> KEY_PASSWORD can
+          #      actually decrypt the key
+          if ! keytool -list -keystore "$KS" -storepass "$STORE_PASSWORD" > /dev/null 2>&1; then
+            SIGN_MODE="ci"
+            REASON="STORE_PASSWORD does not match the decoded keystore"
+          elif ! keytool -list -keystore "$KS" -storepass "$STORE_PASSWORD" -alias "$KEY_ALIAS" > /dev/null 2>&1; then
+            SIGN_MODE="ci"
+            REASON="KEY_ALIAS not found in the keystore"
+          elif command -v jarsigner > /dev/null 2>&1 && command -v jar > /dev/null 2>&1; then
+            echo ci > /tmp/epsilon-t.txt
+            (cd /tmp && jar cf epsilon-t.jar epsilon-t.txt) || true
+            if jarsigner -keystore "$KS" -storepass "$STORE_PASSWORD" \
+                 -keypass "$KEY_PASSWORD" /tmp/epsilon-t.jar "$KEY_ALIAS" \
+                 > /dev/null 2>&1; then
+              echo "Release keystore verified: store password, alias and key password are all valid."
+            else
+              SIGN_MODE="ci"
+              REASON="KEY_PASSWORD cannot decrypt the key (trial signing failed)"
+            fi
+            rm -f /tmp/epsilon-t.jar /tmp/epsilon-t.txt
+          else
+            echo "Release keystore verified: store password and alias are valid."
+          fi
+        fi
+
+        if [ "$SIGN_MODE" = "ci" ]; then
+          echo "::warning::Release signing unavailable ($REASON). Falling back to an ephemeral CI signing key - the APK stays installable but is NOT release-signed. To enable release signing, copy the EXACT values of KEYSTORE_BASE64, STORE_PASSWORD, KEY_ALIAS and KEY_PASSWORD from the original EpsilonMusic repo (Settings > Secrets and variables > Actions)."
+          rm -f "$KS"
+          keytool -genkeypair -keystore "$KS" -storetype PKCS12 \
+            -storepass epsilonci -keypass epsilonci -alias epsilonci \
+            -dname "CN=EpsilonMusicRe CI, OU=CI, O=EpsilonMusicRe, C=IN" \
+            -keyalg RSA -keysize 4096 -validity 10950 > /dev/null 2>&1
+          echo "STORE_PASS=epsilonci" >> "$GITHUB_ENV"
+          echo "KEY_PASS=epsilonci" >> "$GITHUB_ENV"
+          echo "ALIAS=epsilonci" >> "$GITHUB_ENV"
+        else
+          echo "STORE_PASS=$STORE_PASSWORD" >> "$GITHUB_ENV"
+          echo "KEY_PASS=$KEY_PASSWORD" >> "$GITHUB_ENV"
+          echo "ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
+        fi
+        echo "SIGN_MODE=$SIGN_MODE" >> "$GITHUB_ENV"
+
+        {
+          echo "### Signing mode: \`${SIGN_MODE}\`"
+          if [ "$SIGN_MODE" = "ci" ]; then
+            echo "WARNING: APK is signed with an ephemeral **CI key** (installable, but not release-signed)."
+            echo "Reason: ${REASON}."
+            echo "Fix the repo secrets \`KEYSTORE_BASE64\`, \`STORE_PASSWORD\`, \`KEY_ALIAS\`, \`KEY_PASSWORD\` to enable release signing."
+          else
+            echo "OK: APK is **release-signed** with the repository keystore."
+          fi
+        } >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Build Release APK
       run: |
         chmod +x gradlew
         ./gradlew assembleUniversalGmsRelease \
-          -Pandroid.injected.signing.store.file=$(pwd)/keystore.jks \
-          -Pandroid.injected.signing.store.password="$STORE_PASSWORD" \
-          -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
-          -Pandroid.injected.signing.key.password="$KEY_PASSWORD" \
+          -Pandroid.injected.signing.store.file="$(pwd)/keystore.jks" \
+          -Pandroid.injected.signing.store.password="$STORE_PASS" \
+          -Pandroid.injected.signing.key.alias="$ALIAS" \
+          -Pandroid.injected.signing.key.password="$KEY_PASS" \
           --no-daemon \
           --stacktrace
 
@@ -79,7 +138,7 @@ jobs:
       if: success()
       uses: actions/upload-artifact@v4
       with:
-        name: Epsilon-Music-Universal-APK
+        name: Epsilon-MusicRe-Universal-${{ env.SIGN_MODE == 'release' && 'Release-Signed' || 'CI-Signed' }}-APK
         path: app/build/outputs/apk/**/*.apk
         if-no-files-found: error
         retention-days: 30
@@ -88,5 +147,5 @@ jobs:
     - name: Cleanup Keystore
       if: always()
       run: |
-        rm -f keystore.jks
+        rm -f keystore.jks /tmp/epsilon-t.jar /tmp/epsilon-t.txt
         echo "Keystore cleaned up."
