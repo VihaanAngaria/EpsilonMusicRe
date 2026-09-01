@@ -66,10 +66,10 @@ fun Material3SettingsGroup(
         ) {
             items.forEachIndexed { index, item ->
                 val shape = when {
-                    items.size == 1 -> RoundedCornerShape(24.dp)
-                    index == 0 -> RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 4.dp, bottomEnd = 4.dp)
-                    index == items.size - 1 -> RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp, bottomStart = 24.dp, bottomEnd = 24.dp)
-                    else -> RoundedCornerShape(4.dp)
+                    items.size == 1 -> RoundedCornerShape(20.dp)
+                    index == 0 -> RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = 8.dp, bottomEnd = 8.dp)
+                    index == items.size - 1 -> RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp, bottomStart = 20.dp, bottomEnd = 20.dp)
+                    else -> RoundedCornerShape(8.dp)
                 }
 
                 Card(
@@ -121,9 +121,8 @@ private fun Material3SettingsItemRow(
                     .clip(item.iconShape ?: RoundedCornerShape(12.dp))
                     .background(
                         if (item.tintIcon) {
-                            MaterialTheme.colorScheme.primary.copy(
-                                alpha = if (item.isHighlighted) 0.15f else 0.1f
-                            )
+                            if (item.isHighlighted) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.primaryContainer
                         } else {
                             androidx.compose.ui.graphics.Color.Transparent
                         }
@@ -140,9 +139,8 @@ private fun Material3SettingsItemRow(
                     .clip(item.iconShape ?: RoundedCornerShape(12.dp))
                     .background(
                         if (item.tintIcon) {
-                            MaterialTheme.colorScheme.primary.copy(
-                                alpha = if (item.isHighlighted) 0.15f else 0.1f
-                            )
+                            if (item.isHighlighted) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.primaryContainer
                         } else {
                             androidx.compose.ui.graphics.Color.Transparent
                         }
@@ -164,9 +162,9 @@ private fun Material3SettingsItemRow(
                                 tint = if (!item.enabled)
                                     MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                                 else if (item.isHighlighted)
-                                    MaterialTheme.colorScheme.primary
+                                    MaterialTheme.colorScheme.onPrimary
                                 else
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
+                                    MaterialTheme.colorScheme.onPrimaryContainer,
                                 modifier = Modifier.size(if (compact) 20.dp else 24.dp)
                             )
                         } else {
@@ -186,9 +184,9 @@ private fun Material3SettingsItemRow(
                             tint = if (!item.enabled)
                                 MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                             else if (item.isHighlighted)
-                                MaterialTheme.colorScheme.primary
+                                MaterialTheme.colorScheme.onPrimary
                             else
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
+                                MaterialTheme.colorScheme.onPrimaryContainer,
                             modifier = Modifier.size(if (compact) 20.dp else 24.dp)
                         )
                     } else {
