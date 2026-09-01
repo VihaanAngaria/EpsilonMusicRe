@@ -83,6 +83,24 @@ struct ResolvedStream {
     let url: URL
     let duration: Int?
     let clientName: String
+    var loudnessDb: Double?
+    var codec: String?
+    var bitrate: Int?
+    var sampleRate: Int?
+    var videostatsUrl: String?
+
+    init(url: URL, duration: Int?, clientName: String,
+         loudnessDb: Double? = nil, codec: String? = nil, bitrate: Int? = nil,
+         sampleRate: Int? = nil, videostatsUrl: String? = nil) {
+        self.url = url
+        self.duration = duration
+        self.clientName = clientName
+        self.loudnessDb = loudnessDb
+        self.codec = codec
+        self.bitrate = bitrate
+        self.sampleRate = sampleRate
+        self.videostatsUrl = videostatsUrl
+    }
 }
 
 enum SearchFilter: String, CaseIterable, Identifiable {
@@ -145,13 +163,13 @@ final class InnerTube {
     static let shared = InnerTube()
     private init() {}
 
-    private let session: URLSession = .shared
-    private let hl = "en"
-    private let gl = "US"
+    let session: URLSession = .shared
+    let hl = "en"
+    let gl = "US"
 
     // MARK: Request plumbing
 
-    private func post(_ endpoint: String, body: [String: Any], client: YTClientConfig, query: [String: String] = [:]) async throws -> Any {
+    func post(_ endpoint: String, body: [String: Any], client: YTClientConfig, query: [String: String] = [:]) async throws -> Any {
         var urlString = "https://music.youtube.com/youtubei/v1/\(endpoint)?prettyPrint=false"
         for (key, value) in query {
             urlString += "&\(key)=\(value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? value)"
@@ -168,7 +186,27 @@ final class InnerTube {
         request.setValue("https://music.youtube.com", forHTTPHeaderField: "Origin")
         request.setValue("https://music.youtube.com", forHTTPHeaderField: "X-Origin")
         request.setValue("https://music.youtube.com/", forHTTPHeaderField: "Referer")
-        request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
+        request.setValue("1", forHTTPHeaderField: "X-Goog-Api-Format-Version")
+        // Logged-in requests carry the account cookie + SAPISIDHASH authorization
+        // (Android `loginSupported` parity) and the visitor id header.
+        if client.name == "WEB_REMIX", let headers = AccountManager.shared.authHeaders() {
+            for (key, value) in headers {
+                request.setValue(value, forHTTPHeaderField: key)
+            }
+        }
+        if let visitorData = AccountManager.shared.visitorData, !visitorData.isEmpty {
+            request.setValue(visitorData, forHTTPHeaderField: "X-Goog-Visitor-Id")
+        }
+        var finalBody = body
+        if client.name == "WEB_REMIX", let behalf = AccountManager.shared.onBehalfOfUser {
+            if var context = finalBody["context"] as? [String: Any] {
+                var user = context["user"] as? [String: Any] ?? [:]
+                user["onBehalfOfUser"] = behalf
+                context["user"] = user
+                finalBody["context"] = context
+            }
+        }
+        request.httpBody = try JSONSerialization.data(withJSONObject: finalBody, options: [])
         do {
             let (data, response) = try await session.data(for: request)
             guard let http = response as? HTTPURLResponse else { throw InnerTubeError.badResponse }
@@ -184,7 +222,7 @@ final class InnerTube {
         }
     }
 
-    private func remixBody(_ extra: [String: Any]) -> [String: Any] {
+    func remixBody(_ extra: [String: Any]) -> [String: Any] {
         var body = YTClients.webRemix.context(hl: hl, gl: gl)
         for (k, v) in extra { body[k] = v }
         return body
@@ -252,13 +290,20 @@ final class InnerTube {
         let formats = JSON.asArray(JSON.dig(json, "streamingData", "formats")) ?? []
 
         // Prefer itag 140 (AAC 128k m4a) — AVPlayer's most reliable remote format.
+        let loudness = JSON.asDouble(JSON.dig(json, "playerConfig", "audioConfig", "loudnessDb"))
+        let videostats = JSON.asString(JSON.dig(json, "playbackTracking", "videostatsPlaybackUrl", "baseUrl"))
         func fromList(_ list: [Any], wantedItags: [Int], audioOnly: Bool) -> ResolvedStream? {
             for itag in wantedItags {
                 for fmt in list {
                     guard JSON.asInt(JSON.dig(fmt, "itag")) == itag else { continue }
                     if let urlString = JSON.asString(JSON.dig(fmt, "url")), let url = URL(string: urlString) {
                         let duration = JSON.asInt(JSON.dig(fmt, "approxDurationMs")).map { $0 / 1000 }
-                        return ResolvedStream(url: url, duration: duration, clientName: clientName)
+                        return ResolvedStream(url: url, duration: duration, clientName: clientName,
+                                              loudnessDb: loudness,
+                                              codec: JSON.asString(JSON.dig(fmt, "codecs")),
+                                              bitrate: JSON.asInt(JSON.dig(fmt, "bitrate")),
+                                              sampleRate: JSON.asInt(JSON.dig(fmt, "audioSampleRate")),
+                                              videostatsUrl: videostats)
                     }
                 }
             }
@@ -269,7 +314,12 @@ final class InnerTube {
                     if mime.hasPrefix("audio/mp4"), let urlString = JSON.asString(JSON.dig(fmt, "url")),
                        let url = URL(string: urlString) {
                         let duration = JSON.asInt(JSON.dig(fmt, "approxDurationMs")).map { $0 / 1000 }
-                        return ResolvedStream(url: url, duration: duration, clientName: clientName)
+                        return ResolvedStream(url: url, duration: duration, clientName: clientName,
+                                              loudnessDb: loudness,
+                                              codec: JSON.asString(JSON.dig(fmt, "codecs")),
+                                              bitrate: JSON.asInt(JSON.dig(fmt, "bitrate")),
+                                              sampleRate: JSON.asInt(JSON.dig(fmt, "audioSampleRate")),
+                                              videostatsUrl: videostats)
                     }
                 }
             }

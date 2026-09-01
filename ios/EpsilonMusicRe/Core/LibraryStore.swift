@@ -44,6 +44,9 @@ final class LibraryStore: ObservableObject {
         load()
         loadLocalSongs()
         loadDemoSongs()
+        loadDownloadedIds()
+        loadPlayTimes()
+        loadSearchHistory()
     }
 
     private func load() {
@@ -173,6 +176,11 @@ final class LibraryStore: ObservableObject {
         save()
     }
 
+    func deleteHistoryEntry(_ entry: HistoryEntry) {
+        history.removeAll { $0.id == entry.id }
+        save()
+    }
+
     func clearHistory() {
         history = []
         save()
@@ -273,5 +281,157 @@ final class LibraryStore: ObservableObject {
             }
         }
         return out
+    }
+
+    // MARK: Downloads (SongEntity.isDownloaded parity)
+
+    @Published private(set) var downloadedIds: Set<String> = []
+
+    private var downloadedIdsFile: URL {
+        documentsUrl.appendingPathComponent("downloaded-ids.json")
+    }
+
+    func loadDownloadedIds() {
+        if let data = try? Data(contentsOf: downloadedIdsFile),
+           let ids = try? JSONDecoder().decode([String].self, from: data) {
+            downloadedIds = Set(ids)
+        }
+    }
+
+    func saveDownloadedIds() {
+        if let data = try? JSONEncoder().encode(Array(downloadedIds)) {
+            try? data.write(to: downloadedIdsFile, options: [.atomic])
+        }
+    }
+
+    func markDownloaded(_ song: Song) {
+        downloadedIds.insert(song.id)
+        saveDownloadedIds()
+    }
+
+    func markUndownloaded(_ song: Song) {
+        downloadedIds.remove(song.id)
+        saveDownloadedIds()
+    }
+
+    func isMarkedDownloaded(_ song: Song) -> Bool {
+        downloadedIds.contains(song.id)
+    }
+
+    // MARK: Stats (Event.playTime parity — total listen time per song)
+
+    /// playTime in seconds accumulated per song id.
+    @Published private(set) var playTimes: [String: Double] = [:]
+
+    private var playTimesFile: URL {
+        documentsUrl.appendingPathComponent("play-times.json")
+    }
+
+    func loadPlayTimes() {
+        if let data = try? Data(contentsOf: playTimesFile),
+           let times = try? JSONDecoder().decode([String: Double].self, from: data) {
+            playTimes = times
+        }
+    }
+
+    private func savePlayTimes() {
+        if let data = try? JSONEncoder().encode(playTimes) {
+            try? data.write(to: playTimesFile, options: [.atomic])
+        }
+    }
+
+    func addPlayTime(_ seconds: Double, for song: Song) {
+        playTimes[song.id, default: 0] += seconds
+        savePlayTimes()
+    }
+
+    /// Top songs by listen time (StatsScreen source).
+    func topSongsByPlayTime(limit: Int = 30) -> [(song: Song, playTime: Double, playCount: Int)] {
+        var songs: [String: Song] = [:]
+        for entry in history {
+            songs[entry.song.id] = entry.song
+        }
+        return playTimes
+            .compactMap { id, time -> (Song, Double, Int)? in
+                guard let song = songs[id], time > 0 else { return nil }
+                let count = history.filter { $0.song.id == id }.count
+                return (song, time, count)
+            }
+            .sorted { $0.1 > $1.1 }
+            .prefix(limit)
+            .map { (song: $0.0, playTime: $0.1, playCount: $0.2) }
+    }
+
+    func topArtists(limit: Int = 30) -> [(artist: String, playTime: Double, playCount: Int)] {
+        var stats: [String: (Double, Int)] = [:]
+        for entry in history {
+            for artist in entry.song.artists {
+                stats[artist, default: (0, 0)].0 += playTimes[entry.song.id] ?? 0
+                stats[artist, default: (0, 0)].1 += 1
+            }
+        }
+        return stats
+            .filter { $0.value.0 > 0 || $0.value.1 > 0 }
+            .sorted { $0.value.0 > $1.value.0 }
+            .prefix(limit)
+            .map { (artist: $0.key, playTime: $0.value.0, playCount: $0.value.1) }
+    }
+
+    func topAlbums(limit: Int = 30) -> [(album: String?, song: Song, playTime: Double, playCount: Int)] {
+        var stats: [String: (String, Song, Double, Int)] = [:]
+        for entry in history {
+            guard let album = entry.song.album else { continue }
+            stats[album, default: (album, entry.song, 0, 0)].2 += playTimes[entry.song.id] ?? 0
+            stats[album, default: (album, entry.song, 0, 0)].3 += 1
+        }
+        return stats
+            .filter { $0.value.2 > 0 }
+            .sorted { $0.value.2 > $1.value.2 }
+            .prefix(limit)
+            .map { (album: $0.value.0, song: $0.value.1, playTime: $0.value.2, playCount: $0.value.3) }
+    }
+
+    var totalPlayTime: Double {
+        playTimes.values.reduce(0, +)
+    }
+
+    // MARK: Search history (SearchHistory entity parity)
+
+    @Published private(set) var searchHistory: [String] = []
+
+    private var searchHistoryFile: URL {
+        documentsUrl.appendingPathComponent("search-history.json")
+    }
+
+    func loadSearchHistory() {
+        if let data = try? Data(contentsOf: searchHistoryFile),
+           let queries = try? JSONDecoder().decode([String].self, from: data) {
+            searchHistory = queries
+        }
+    }
+
+    func recordSearch(_ query: String) {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        searchHistory.removeAll { $0 == trimmed }
+        searchHistory.insert(trimmed, at: 0)
+        if searchHistory.count > 20 { searchHistory.removeLast() }
+        if let data = try? JSONEncoder().encode(searchHistory) {
+            try? data.write(to: searchHistoryFile, options: [.atomic])
+        }
+    }
+
+    func clearSearchHistory() {
+        searchHistory = []
+        try? FileManager.default.removeItem(at: searchHistoryFile)
+    }
+
+    // MARK: Restore (BackupAndRestore parity)
+
+    func restore(liked: [Song], history: [HistoryEntry], playlists: [LocalPlaylist]) {
+        likedSongs = liked
+        self.history = history
+        self.playlists = playlists
+        save()
     }
 }

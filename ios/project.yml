@@ -27,6 +27,7 @@ targets:
         CFBundleVersion: "1"
         UILaunchScreen: {}
         NSAppleMusicUsageDescription: "Epsilon Music reads your device music library to browse and play your songs."
+        NSMicrophoneUsageDescription: "Epsilon Music uses the microphone to recognize music playing around you."
         UIBackgroundModes:
           - audio
         UISupportedInterfaceOrientations:
