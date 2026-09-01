@@ -115,12 +115,12 @@ final class LibraryStore: ObservableObject {
 
     private func requestOnDeviceSongs() {
         let query = MPMediaQuery.songs()
-        query.groupingType = .song
         let items = query.items ?? []
         var mapped: [Song] = []
         for item in items {
-            // Skip DRM-protected items (matches the Android app's DRM-skip behavior).
-            if item.hasProtectedContent { continue }
+            // Skip items without a playable local asset (e.g. Apple Music catalog
+            // streams — the Android app's equivalent DRM-skip).
+            guard item.assetURL != nil else { continue }
             let key = item.persistentID.description
             let duration = Int(item.playbackDuration)
             let song = Song(

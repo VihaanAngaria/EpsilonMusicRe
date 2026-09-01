@@ -122,30 +122,32 @@ struct LibraryView: View {
     // MARK: Library mix (Android LibraryMixScreen grid menu)
 
     private var libraryMix: some View {
-        LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible())], spacing: 12) {
+        VStack(alignment: .leading, spacing: 4) {
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible())], spacing: 12) {
             gridTile(icon: "heart.fill", accentIcon: true, title: "Liked songs", countText: "\(library.likedSongs.count) songs", route: .liked)
             gridTile(icon: "chart.line.uptrend.xyaxis", title: "My top tracks", countText: "\(library.topSongs(limit: 100).count) songs", route: .topTracks)
             gridTile(icon: "arrow.down.circle.fill", title: "Offline / demo", countText: "\(library.localSongs.filter { $0.isDemo }.count) songs", route: .offline)
             gridTile(icon: "folder.fill", title: "On this device", countText: "\(library.localSongs.filter { !$0.isDemo }.count) songs", route: .localSongs)
-        }
-        .padding(.horizontal, 16)
+            }
+            .padding(.horizontal, 16)
 
-        VStack(alignment: .leading, spacing: 8) {
-            SectionHeader(title: "Playlists", trailingText: "\(library.playlists.count)")
-            if library.playlists.isEmpty {
-                EmptyPlaceholder(icon: "music.note.list", text: "Create your first playlist with the + button, or import one from YouTube Music.")
-            } else {
-                LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible())], spacing: 16) {
-                    ForEach(library.playlists.prefix(6)) { playlist in
-                        NavigationLink(value: Route.localPlaylist(playlist.id)) {
-                            MediaCard(title: playlist.name,
-                                      subtitle: "\(playlist.songCount) songs",
-                                      thumbnail: playlist.thumbnailUrl)
+            VStack(alignment: .leading, spacing: 8) {
+                SectionHeader(title: "Playlists", trailingText: "\(library.playlists.count)")
+                if library.playlists.isEmpty {
+                    EmptyPlaceholder(icon: "music.note.list", text: "Create your first playlist with the + button, or import one from YouTube Music.")
+                } else {
+                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible())], spacing: 16) {
+                        ForEach(library.playlists.prefix(6)) { playlist in
+                            NavigationLink(value: Route.localPlaylist(playlist.id)) {
+                                MediaCard(title: playlist.name,
+                                          subtitle: "\(playlist.songCount) songs",
+                                          thumbnail: playlist.thumbnailUrl)
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
+                    .padding(.horizontal, 16)
                 }
-                .padding(.horizontal, 16)
             }
         }
     }
