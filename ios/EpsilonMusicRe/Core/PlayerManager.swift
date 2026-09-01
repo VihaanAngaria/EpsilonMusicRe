@@ -190,7 +190,8 @@ final class PlayerManager: NSObject, ObservableObject {
         if let index = queue.firstIndex(where: { $0.id == song.id }) {
             queue.remove(at: index)
         }
-        if let currentIdx = currentIndex, currentIdx >= 0 {
+        let currentIdx = currentIndex
+        if currentIdx >= 0 {
             queue.insert(song, at: currentIdx + 1)
         } else {
             queue.append(song)
