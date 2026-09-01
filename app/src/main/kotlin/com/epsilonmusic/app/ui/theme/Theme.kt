@@ -5,8 +5,10 @@ package com.epsilonmusic.app.ui.theme
 import android.graphics.Bitmap
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
@@ -24,7 +26,21 @@ import com.materialkolor.dynamiccolor.ColorSpec
 import com.materialkolor.rememberDynamicColorScheme
 import com.materialkolor.score.Score
 
-val DefaultThemeColor = Color(0xFFED5564)
+/*
+ * "Ember Noir" design refresh.
+ * Same red soul as the original coral (#ED5564), deepened into an imperial ember red
+ * and rendered with the 2025 Expressive palette style for bolder tonal contrast.
+ */
+val DefaultThemeColor = Color(0xFFE63946)
+
+/** Soft-squircle shape system: calmer small elements, rounder cards and sheets. */
+val AppShapes = Shapes(
+    extraSmall = RoundedCornerShape(12.dp),
+    small = RoundedCornerShape(16.dp),
+    medium = RoundedCornerShape(20.dp),
+    large = RoundedCornerShape(24.dp),
+    extraLarge = RoundedCornerShape(32.dp),
+)
 
 @Composable
 fun epsilonmusicTheme(
@@ -47,7 +63,7 @@ fun epsilonmusicTheme(
             seedColor = themeColor, 
             isDark = darkTheme,
             specVersion = ColorSpec.SpecVersion.SPEC_2025,
-            style = PaletteStyle.TonalSpot 
+            style = PaletteStyle.Expressive 
         )
     }
 
@@ -64,9 +80,7 @@ fun epsilonmusicTheme(
         MaterialTheme(
         colorScheme = colorScheme,
         typography = AppTypography,
-        shapes = androidx.compose.material3.MaterialTheme.shapes.copy(
-            extraSmall = androidx.compose.foundation.shape.RoundedCornerShape(24.dp)
-        ),
+        shapes = AppShapes,
         content = content
     )
 }

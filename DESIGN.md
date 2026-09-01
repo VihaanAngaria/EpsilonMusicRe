@@ -12,7 +12,20 @@ We embrace the Material 3 Dynamic Color system to provide a personalized, expres
 
 ### Dynamic Color & Seed
 *   **Dynamic First:** Colors must *always* come from `MaterialTheme.colorScheme`. Never hardcode hex values (`#FF...`) in individual screens or components.
-*   **Seed Color:** The app uses a default seed color (`DefaultThemeColor = 0xFFED5564`) to generate a full tonal palette when system dynamic color is unavailable or disabled. The current spec version is `SPEC_2025` using `PaletteStyle.TonalSpot`.
+*   **Seed Color:** The app uses a default seed color (`DefaultThemeColor = 0xFFE63946`, "Ember") to generate a full tonal palette when system dynamic color is unavailable or disabled. The current spec version is `SPEC_2025` using `PaletteStyle.Expressive`, which yields bolder tonal contrast than the classic tonal spot while remaining strictly Material 3.
+
+### Shape System
+The theme ships a soft-squircle shape system (`AppShapes`) that all default-shaped components inherit:
+
+| Token | Radius | Used by |
+|---|---|---|
+| `extraSmall` | 12dp | Chips, tooltips, snackbars, small badges |
+| `small` | 16dp | Buttons, text fields, menu items |
+| `medium` | 20dp | Cards, list surfaces |
+| `large` | 24dp | FABs, bottom sheets, large menus |
+| `extraLarge` | 32dp | Dialogs, search bars |
+
+Component-level exceptions (e.g. thumbnail corners driven by the user's `ThumbnailCornerRadius` preference, circular avatars) must keep overriding the theme shape explicitly.
 
 ### Semantic Color Roles
 Use the correct semantic color roles as defined by M3:
