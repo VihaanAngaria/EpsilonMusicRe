@@ -1,6 +1,7 @@
 package com.epsilonmusic.app.playback
 
 import android.content.Context
+import androidx.media3.session.MediaSessionService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -12,7 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 class CastConnectionHandler(
     context: Context,
     scope: CoroutineScope,
-    musicService: MusicService
+    musicService: MediaSessionService
 ) {
     private val _isCasting = MutableStateFlow(false)
     val isCasting: StateFlow<Boolean> = _isCasting
