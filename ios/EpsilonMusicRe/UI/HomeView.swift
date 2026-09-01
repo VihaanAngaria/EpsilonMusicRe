@@ -111,6 +111,7 @@ struct HomeView: View {
 
     // MARK: Sections
 
+    @ViewBuilder
     private var exploreShortcuts: some View {
         HStack(spacing: 12) {
             NavigationLink(value: Route.explore) {

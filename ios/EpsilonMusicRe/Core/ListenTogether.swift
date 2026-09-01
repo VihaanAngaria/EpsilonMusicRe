@@ -81,7 +81,8 @@ enum LTServers {
     /// Fetches the public server list (app/server.json in the main repo).
     static func fetchServers() async -> [ServerEntry] {
         let url = "https://raw.githubusercontent.com/VihaanAngaria/EpsilonMusic/refs/heads/main/app/server.json"
-        guard let (_, json) = await LyricsHTTP.get(url: url, timeout: 10),
+        guard let (_, parsed) = await LyricsHTTP.get(url: url, timeout: 10),
+              let json = parsed as? [String: Any],
               let name = JSON.asString(json["name"]),
               let serverUrl = JSON.asString(json["serverUrl"]) else {
             return fallbacks.map { ServerEntry(name: "Community server", region: "", serverUrl: $0) }
@@ -218,7 +219,7 @@ final class ListenTogetherClient: ObservableObject {
 
     private func handle(message: URLSessionWebSocketTask.Message) {
         guard case .string(let text) = message, let data = text.data(using: .utf8),
-              let json = JSON.parse(data) else { return }
+              let parsed = JSON.parse(data), let json = parsed as? [String: Any] else { return }
         let type = JSON.asString(json["type"]) ?? ""
         let payload: [String: Any] = (json["payload"] as? [String: Any])
             ?? (json["d"] as? [String: Any]) ?? [:]

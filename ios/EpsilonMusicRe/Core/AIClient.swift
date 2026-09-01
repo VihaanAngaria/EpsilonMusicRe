@@ -178,7 +178,7 @@ final class AIClient: ObservableObject {
         let (data, response) = try await URLSession.shared.data(for: request)
         guard (response as? HTTPURLResponse)?.statusCode == 200,
               let json = JSON.parse(data),
-              let translations = JSON.asArray(json["translations"]) else {
+              let translations = JSON.asArray(JSON.dig(json, "translations")) else {
             throw AIClientError.badResponse
         }
         return translations.compactMap { JSON.asString(JSON.dig($0, "text")) }
@@ -269,9 +269,11 @@ final class AIClient: ObservableObject {
     }
 
     func modifyPlaylist(current: [Song], instruction: String) async throws -> AIModifyResult {
-        let songsJson = Self.jsonString(from: current.enumerated().map { index, song in
-            ["id": index, "title": song.title, "artist": song.artistsText]
-        }) ?? "[]"
+        let songsArray = current.enumerated().map { index, song -> [String: String] in
+            ["id": "\(index)", "title": song.title, "artist": song.artistsText]
+        }
+        let songsJson = (try? JSONSerialization.data(withJSONObject: songsArray))
+            .flatMap { String(data: $0, encoding: .utf8) } ?? "[]"
         let systemPrompt = """
         You are a playlist editor. Current playlist (JSON): \(songsJson). \
         User instruction: \(instruction). \

@@ -606,14 +606,15 @@ extension InnerTube {
         var result = MediaInfoResult(title: "", channelName: "", channelId: nil, channelThumbnail: nil,
                                      subscriberCount: nil, publishDate: nil, viewCount: nil, likeCount: nil, dislikeCount: nil)
         for content in contents {
-            if let primary = JSON.asDict(content["videoPrimaryInfoRenderer"]) {
+            guard let contentDict = content as? [String: Any] else { continue }
+            if let primary = JSON.asDict(contentDict["videoPrimaryInfoRenderer"]) {
                 result.title = Self.runsText(JSON.dig(primary, "title", "runs")) ?? result.title
                 result.publishDate = Self.runsText(JSON.dig(primary, "dateText", "runs"))
                 if let views = Self.runsText(JSON.dig(primary, "viewCount", "videoViewCountRenderer", "viewCount", "runs")) {
                     result.viewCount = views
                 }
             }
-            if let secondary = JSON.asDict(content["videoSecondaryInfoRenderer"]) {
+            if let secondary = JSON.asDict(contentDict["videoSecondaryInfoRenderer"]) {
                 let owner = JSON.dig(secondary, "owner", "videoOwnerRenderer")
                 result.channelName = Self.runsText(JSON.dig(owner, "title", "runs")) ?? result.channelName
                 result.channelId = JSON.asString(JSON.dig(owner, "navigationEndpoint", "browseEndpoint", "browseId"))

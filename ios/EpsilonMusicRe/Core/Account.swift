@@ -58,13 +58,6 @@ final class AccountManager: ObservableObject {
 
     /// `Authorization: SAPISIDHASH <epoch>_<sha1("<epoch> <SAPISID> https://music.youtube.com")>`
     static func sapisidHash(cookie: String, epoch: Int = Int(Date().timeIntervalSince1970)) -> String {
-        guard let sapisid = cookie
-            .components(separatedBy: ";")
-            .compactMap({ $0.trimmingCharacters(in: .whitespaces).split(separator: "=", maxSplits: 1).first.map(String.init) })
-            .contains("SAPISID") else {
-            // fall back: find SAPISID value the easy way
-            return ""
-        }
         var sapisidValue = ""
         for part in cookie.components(separatedBy: ";") {
             let trimmed = part.trimmingCharacters(in: .whitespaces)

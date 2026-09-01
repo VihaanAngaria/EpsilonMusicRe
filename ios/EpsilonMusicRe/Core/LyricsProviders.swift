@@ -349,7 +349,7 @@ enum BetterLyrics {
         components?.queryItems = items
         guard let url = components?.url?.absoluteString else { return nil }
         guard let (_, json) = await LyricsHTTP.get(url: url, timeout: 15) else { return nil }
-        guard let ttml = JSON.asString(json["ttml"]), !ttml.isEmpty else { return nil }
+        guard let ttml = JSON.asString(JSON.dig(json, "ttml")), !ttml.isEmpty else { return nil }
         return TTMLParser.parse(ttml)
     }
 }
@@ -442,25 +442,24 @@ enum KuGou {
         for candidate in candidates {
             let candidateDuration = JSON.asInt(JSON.dig(candidate, "duration")) ?? 0
             if duration > 0, candidateDuration > 0, abs(candidateDuration - duration) > 8 { continue }
-            hash = JSON.asString(candidate["hash"])
+            hash = JSON.asString(JSON.dig(candidate, "hash"))
             break
         }
         guard let hash = hash else { return nil }
         guard let (_, searchJson) = await LyricsHTTP.get(url: "https://lyrics.kugou.com/search?ver=1&man=yes&client=pc&hash=\(hash)", timeout: 10),
               let results = JSON.asArray(JSON.dig(searchJson, "candidates")), let first = results.first else { return nil }
-        let id = JSON.asString(first["id"]) ?? ""
-        let accesskey = JSON.asString(first["accesskey"]) ?? ""
+        let id = JSON.asString(JSON.dig(first, "id")) ?? ""
+        let accesskey = JSON.asString(JSON.dig(first, "accesskey")) ?? ""
         guard !id.isEmpty, !accesskey.isEmpty else { return nil }
         guard let (_, downloadJson) = await LyricsHTTP.get(url: "https://lyrics.kugou.com/download?fmt=lrc&charset=utf8&client=pc&ver=1&id=\(id)&accesskey=\(accesskey)", timeout: 10) else { return nil }
-        guard let content = JSON.asString(downloadJson["content"]),
+        guard let content = JSON.asString(JSON.dig(downloadJson, "content")),
               let data = Data(base64Encoded: content) else { return nil }
         guard var lrc = String(data: data, encoding: .utf8) else { return nil }
-        // KuGou normalize: strip metadata head.
+        // KuGou normalize: keep timestamped lines and plain text, drop [ar:…] metadata.
         lrc = lrc.components(separatedBy: "\n")
             .filter { line in
-                line.contains("]:") == false || line.contains("]")
+                !line.hasPrefix("[") || line.range(of: "^\\[\\d", options: .regularExpression) != nil
             }
-            .filter { !line.contains("词") || !line.hasPrefix("[") }
             .joined(separator: "\n")
         if let lines = LRCParser.parse(lrc) {
             let synced = lines.contains { $0.time >= 0 }

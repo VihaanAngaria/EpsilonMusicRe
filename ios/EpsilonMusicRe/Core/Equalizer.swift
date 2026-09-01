@@ -91,6 +91,7 @@ final class DSPState {
     var lock = NSLock()
     var enabled = false
     var preamp: Double = 1.0
+    var normalizationEnabled = true
     var normalizationGain: Double = 1.0
     var skipSilenceEnabled = false
     var sampleRate: Double = 44100
@@ -225,12 +226,13 @@ final class EqualizerEngine: ObservableObject {
 
     // MARK: Filter rebuild (main thread; DSP reads under lock)
 
-    nonisolated func rebuildFilters() {
+    func rebuildFilters() {
         let state = dsp
         state.lock.lock()
         defer { state.lock.unlock() }
         state.enabled = enabled
         state.preamp = pow(10.0, preampDb / 20.0)
+        state.normalizationEnabled = normalizationEnabled
         state.bands = bands
         state.skipSilenceEnabled = skipSilence
         let sampleRate = state.sampleRate > 0 ? state.sampleRate : 44100
@@ -250,6 +252,7 @@ final class EqualizerEngine: ObservableObject {
     func setLoudness(db: Double?) {
         let clamped = min(max(-(db ?? 0), -15), 3)
         dsp.lock.lock()
+        dsp.normalizationEnabled = normalizationEnabled
         dsp.normalizationGain = pow(10.0, clamped / 20.0)
         dsp.lock.unlock()
     }
@@ -285,7 +288,7 @@ final class EqualizerEngine: ObservableObject {
                 epsTapPrepare(state: holder.state, formatDescription: formatDescription)
             },
             unprepare: { _ in },
-            process: { tap, numberFrames, _, bufferList in
+            process: { tap, numberFrames, _, bufferList, _, _ in
                 guard let storage = MTAudioProcessingTapGetStorage(tap) else { return }
                 let holder = Unmanaged<EQTapStateHolder>.fromOpaque(storage).takeUnretainedValue()
                 epsTapProcess(state: holder.state, numberFrames: Int(numberFrames), bufferList: bufferList)
@@ -322,8 +325,8 @@ private func epsTapProcess(state: DSPState, numberFrames: Int, bufferList: Unsaf
     state.lock.lock()
     defer { state.lock.unlock() }
 
-    let list = bufferList.pointee
-    let bufferCount = Int(list.mNumberBuffers)
+    let buffers = UnsafeMutableAudioBufferListPointer(bufferList)
+    let bufferCount = buffers.count
     let channels = max(1, state.channels)
     let useFilters = state.enabled && !state.filters.isEmpty
     let totalGain = (state.enabled ? state.preamp : 1.0)
@@ -334,7 +337,7 @@ private func epsTapProcess(state: DSPState, numberFrames: Int, bufferList: Unsaf
     if state.isInterleaved {
         // Interleaved: one buffer with channels interleaved per frame.
         guard bufferCount > 0 else { return }
-        let buffer = list.mBuffers[0]
+        let buffer = buffers[0]
         let frameCount = min(numberFrames, Int(buffer.mDataByteCount) / (MemoryLayout<Float>.size * channels))
         if state.isFloat {
             let ptr = buffer.mData!.assumingMemoryBound(to: Float.self)
@@ -372,7 +375,7 @@ private func epsTapProcess(state: DSPState, numberFrames: Int, bufferList: Unsaf
     } else {
         // Non-interleaved: one buffer per channel.
         for bufferIndex in 0..<min(bufferCount, channels) {
-            let buffer = list.mBuffers[bufferIndex]
+            let buffer = buffers[bufferIndex]
             let frameCount = min(numberFrames, Int(buffer.mDataByteCount) / MemoryLayout<Float>.size)
             if state.isFloat {
                 let ptr = buffer.mData!.assumingMemoryBound(to: Float.self)
@@ -429,7 +432,7 @@ extension AVPlayerItem {
         guard engine.enabled || engine.normalizationEnabled || engine.skipSilence else { return item }
         guard let tap = engine.makeTap() else { return item }
         let mix = AVMutableAudioMix()
-        let params = AVMutableAudioMixInputParameters(trackID: 0)
+        let params = AVMutableAudioMixInputParameters(trackID: CMPersistentTrackID(0))
         params.audioTapProcessor = tap
         mix.inputParameters = [params]
         item.audioMix = mix

@@ -154,7 +154,9 @@ struct BrowseView: View {
                     EmptyPlaceholder(icon: "music.quarternote.3", text: "Nothing to browse here yet.")
                 } else {
                     ForEach(shelves) { shelf in
-                        ItemShelf(title: shelf.title, items: shelf.items)
+                        ItemShelf(shelf: shelf) { song, songs in
+                            player.play(song, queue: songs, sourceName: title)
+                        }
                     }
                 }
                 Color.clear.frame(height: 96)

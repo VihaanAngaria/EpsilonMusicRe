@@ -106,7 +106,8 @@ final class DiscordPresence: ObservableObject {
 
     private func handle(message: URLSessionWebSocketTask.Message) {
         guard case .string(let text) = message, let data = text.data(using: .utf8),
-              let json = JSON.parse(data),
+              let parsed = JSON.parse(data),
+              let json = parsed as? [String: Any],
               let op = JSON.asInt(json["op"]) else { return }
         if let seq = JSON.asInt(json["s"]) { lastSequence = seq }
 
@@ -282,7 +283,8 @@ final class DiscordPresence: ObservableObject {
               let json = JSON.parse(data),
               let assets = JSON.asArray(json) else { return nil }
         for asset in assets {
-            if let path = JSON.asString(asset["external_asset_path"]) {
+            if let assetDict = asset as? [String: Any],
+               let path = JSON.asString(assetDict["external_asset_path"]) {
                 return "mp:" + path
             }
         }
