@@ -278,26 +278,25 @@ final class EqualizerEngine: ObservableObject {
             clientInfo: Unmanaged.passRetained(EQTapStateHolder(state)).toOpaque(),
             init: nil,
             finalize: { tap in
-                if let storage = MTAudioProcessingTapGetStorage(tap) {
-                    Unmanaged<EQTapStateHolder>.fromOpaque(storage).release()
-                }
+                let storage = MTAudioProcessingTapGetStorage(tap)
+                Unmanaged<EQTapStateHolder>.fromOpaque(storage).release()
             },
             prepare: { tap, _, format in
-                guard let storage = MTAudioProcessingTapGetStorage(tap) else { return }
-                let holder = Unmanaged<EQTapStateHolder>.fromOpaque(storage).takeUnretainedValue()
+                let holder = Unmanaged<EQTapStateHolder>.fromOpaque(MTAudioProcessingTapGetStorage(tap)).takeUnretainedValue()
                 epsTapPrepare(state: holder.state, format: format)
             },
             unprepare: { _ in },
             process: { tap, numberFrames, _, bufferList, _, _ in
-                guard let storage = MTAudioProcessingTapGetStorage(tap) else { return }
-                let holder = Unmanaged<EQTapStateHolder>.fromOpaque(storage).takeUnretainedValue()
+                let holder = Unmanaged<EQTapStateHolder>.fromOpaque(MTAudioProcessingTapGetStorage(tap)).takeUnretainedValue()
                 epsTapProcess(state: holder.state, numberFrames: Int(numberFrames), bufferList: bufferList)
             }
         )
         var tap: MTAudioProcessingTap?
-        let status = MTAudioProcessingTapCreate(kCFAllocatorDefault, callbacks, 0, &tap)
-        guard status == noErr else { return nil }
-        return tap
+        let status = withUnsafeMutablePointer(to: &callbacks) { callbacksPointer in
+            MTAudioProcessingTapCreate(kCFAllocatorDefault, callbacksPointer, 0, &tap)
+        }
+        guard status == noErr, let createdTap = tap else { return nil }
+        return createdTap
     }
 }
 
