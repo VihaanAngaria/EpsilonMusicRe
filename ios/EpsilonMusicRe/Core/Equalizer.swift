@@ -282,7 +282,7 @@ final class EqualizerEngine: ObservableObject {
                     Unmanaged<EQTapStateHolder>.fromOpaque(storage).release()
                 }
             },
-            prepare: { tap, formatDescription, _ in
+            prepare: { tap, _, formatDescription in
                 guard let storage = MTAudioProcessingTapGetStorage(tap) else { return }
                 let holder = Unmanaged<EQTapStateHolder>.fromOpaque(storage).takeUnretainedValue()
                 epsTapPrepare(state: holder.state, formatDescription: formatDescription)
@@ -338,7 +338,7 @@ private func epsTapProcess(state: DSPState, numberFrames: Int, bufferList: Unsaf
         // Interleaved: one buffer with channels interleaved per frame.
         guard bufferCount > 0 else { return }
         let buffer = buffers[0]
-        let frameCount = min(numberFrames, Int(buffer.mDataByteCount) / (MemoryLayout<Float>.size * channels))
+        let frameCount = min(numberFrames, Int(buffer.mDataByteSize) / (MemoryLayout<Float>.size * channels))
         if state.isFloat {
             let ptr = buffer.mData!.assumingMemoryBound(to: Float.self)
             for frame in 0..<frameCount {
@@ -376,7 +376,7 @@ private func epsTapProcess(state: DSPState, numberFrames: Int, bufferList: Unsaf
         // Non-interleaved: one buffer per channel.
         for bufferIndex in 0..<min(bufferCount, channels) {
             let buffer = buffers[bufferIndex]
-            let frameCount = min(numberFrames, Int(buffer.mDataByteCount) / MemoryLayout<Float>.size)
+            let frameCount = min(numberFrames, Int(buffer.mDataByteSize) / MemoryLayout<Float>.size)
             if state.isFloat {
                 let ptr = buffer.mData!.assumingMemoryBound(to: Float.self)
                 for frame in 0..<frameCount {

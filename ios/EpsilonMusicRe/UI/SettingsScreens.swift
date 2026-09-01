@@ -679,13 +679,13 @@ struct CSVImportView: View {
     }
 
     static func parse(text: String) -> [(artist: String, title: String)] {
-        var out: [(String, String)] = []
+        var out: [(artist: String, title: String)] = []
         let lines = text.components(separatedBy: .newlines).filter { !$0.isEmpty }
         for (index, rawLine) in lines.enumerated() {
             let line = rawLine.trimmingCharacters(in: .whitespaces)
             if line.hasPrefix("#EXTINF:") {
                 // #EXTINF:duration,Artist - Title
-                let parts = line.dropFirst("#EXTINF:".count).components(separatedBy: ",", maxSplits: 1)
+                let parts = String(line.dropFirst("#EXTINF:".count)).components(separatedBy: ",", maxSplits: 1)
                 if parts.count == 2 {
                     let entry = parts[1]
                     if let dash = entry.range(of: " - ") {

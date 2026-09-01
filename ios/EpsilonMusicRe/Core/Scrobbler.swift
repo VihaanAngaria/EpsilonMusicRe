@@ -213,7 +213,7 @@ final class Scrobbler: ObservableObject {
     }
 
     private func lastfmUpdateNowPlaying(song: Song, duration: Int) {
-        lastfmCall("track.updateNowPlaying", [
+        lastfmCall("track.updateNowPlaying", extra: [
             "artist": song.artistsText,
             "track": song.title,
             "duration": "\(duration)",
@@ -221,7 +221,7 @@ final class Scrobbler: ObservableObject {
     }
 
     private func lastfmScrobble(song: Song, duration: Int) {
-        lastfmCall("track.scrobble", [
+        lastfmCall("track.scrobble", extra: [
             "artist": song.artistsText,
             "track": song.title,
             "duration": "\(duration)",
@@ -231,7 +231,7 @@ final class Scrobbler: ObservableObject {
 
     func lastfmLove(song: Song, love: Bool) {
         guard lastfmEnabled, lastfmSendLikes, lastfmSession != nil else { return }
-        lastfmCall(love ? "track.love" : "track.unlove", [
+        lastfmCall(love ? "track.love" : "track.unlove", extra: [
             "artist": song.artistsText,
             "track": song.title,
         ], signed: true)

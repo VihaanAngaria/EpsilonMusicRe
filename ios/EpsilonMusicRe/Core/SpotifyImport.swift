@@ -67,10 +67,11 @@ final class SpotifyImporter: ObservableObject {
         let gistUrl = "https://gist.githubusercontent.com/sonic-liberation/22ed9c6ba463899e933427f7de1f0eef/raw/"
         var secret = ""
         var version = 1
-        if let (_, json) = await LyricsHTTP.get(url: gistUrl, timeout: 15),
-           let entries = JSON.asArray(json) {
+        if let (_, gistJson) = await LyricsHTTP.get(url: gistUrl, timeout: 15),
+           let entries = JSON.asArray(gistJson) {
             for entry in entries {
-                if let s = JSON.asString(entry["s"]), let v = JSON.asInt(entry["v"]), v >= version {
+                if let entryDict = entry as? [String: Any],
+                   let s = JSON.asString(entryDict["s"]), let v = JSON.asInt(entryDict["v"]), v >= version {
                     secret = s
                     version = v
                 }
@@ -80,7 +81,8 @@ final class SpotifyImporter: ObservableObject {
 
         // 2. Server time.
         var serverTime = Int(Date().timeIntervalSince1970)
-        if let (_, timeJson) = await LyricsHTTP.get(url: "https://open.spotify.com/api/server-time", timeout: 10) {
+        if let (_, timeParsed) = await LyricsHTTP.get(url: "https://open.spotify.com/api/server-time", timeout: 10),
+           let timeJson = timeParsed as? [String: Any] {
             if let t = JSON.asInt(timeJson["serverTime"]) { serverTime = t }
         }
 
@@ -97,7 +99,7 @@ final class SpotifyImporter: ObservableObject {
         }
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse, http.statusCode == 200,
-              let json = JSON.parse(data) else {
+              let parsed = JSON.parse(data), let json = parsed as? [String: Any] else {
             throw SpotifyError.invalidCookie
         }
         let isAnonymous = JSON.asBool(json["isAnonymous"]) ?? true

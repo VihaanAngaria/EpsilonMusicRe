@@ -59,7 +59,7 @@ final class MicRecorder: ObservableObject {
         input.installTap(onBus: 0, bufferSize: 4096, format: format) { [weak self] buffer, _ in
             let frames = Int(buffer.frameLength)
             guard frames > 0 else { return }
-            if let data = buffer.audioBufferList.pointee.mBuffers[0].mData {
+            if let data = UnsafeMutableAudioBufferListPointer(buffer.audioBufferList).first?.mData {
                 let pointer = data.assumingMemoryBound(to: Int16.self)
                 let chunk = UnsafeBufferPointer(start: pointer, count: frames)
                 collected.append(Array(chunk))
@@ -323,17 +323,17 @@ enum ShazamSignatureGenerator {
                     let diff = peak.fftPassNumber - prevFftPassNumber
                     if diff >= 255 {
                         peakBuf.append(0xFF)
-                        appendLittleEndian32(&peakBuf, UInt32(bitPattern: peak.fftPassNumber))
+                        appendLittleEndian32(&peakBuf, peak.fftPassNumber)
                         prevFftPassNumber = peak.fftPassNumber
                     }
                     peakBuf.append(UInt8(peak.fftPassNumber - prevFftPassNumber))
-                    appendLittleEndian16(&peakBuf, UInt16(bitPattern: peak.peakMagnitude))
-                    appendLittleEndian16(&peakBuf, UInt16(bitPattern: peak.correctedPeakFrequencyBin))
+                    appendLittleEndian16(&peakBuf, peak.peakMagnitude)
+                    appendLittleEndian16(&peakBuf, peak.correctedPeakFrequencyBin)
                     prevFftPassNumber = peak.fftPassNumber
                 }
 
-                appendLittleEndian32(&contents, UInt32(0x60030040 + bandId))
-                appendLittleEndian32(&contents, UInt32(peakBuf.count))
+                appendLittleEndian32(&contents, 0x60030040 + bandId)
+                appendLittleEndian32(&contents, peakBuf.count)
                 contents.append(contentsOf: peakBuf)
 
                 let padBytes = (4 - peakBuf.count % 4) % 4
@@ -346,20 +346,20 @@ enum ShazamSignatureGenerator {
             var header = [UInt8]()
             appendLittleEndian32(&header, 0xcafe2580)
             appendLittleEndian32(&header, 0) // CRC placeholder
-            appendLittleEndian32(&header, UInt32(bitPattern: sizeMinusHeader))
+            appendLittleEndian32(&header, sizeMinusHeader)
             appendLittleEndian32(&header, 0x94119c00)
             appendLittleEndian32(&header, 0)
             appendLittleEndian32(&header, 0)
             appendLittleEndian32(&header, 0)
-            appendLittleEndian32(&header, UInt32(3 << 27))
+            appendLittleEndian32(&header, 3 << 27)
             appendLittleEndian32(&header, 0)
             appendLittleEndian32(&header, 0)
-            appendLittleEndian32(&header, UInt32(bitPattern: samplesAndOffset))
-            appendLittleEndian32(&header, UInt32((15 << 19) + 0x40000))
+            appendLittleEndian32(&header, samplesAndOffset)
+            appendLittleEndian32(&header, (15 << 19) + 0x40000)
 
             var full = header
             appendLittleEndian32(&full, 0x40000000)
-            appendLittleEndian32(&full, UInt32(contents.count + 8))
+            appendLittleEndian32(&full, contents.count + 8)
             full.append(contentsOf: contents)
 
             // CRC32 over bytes[8...]
@@ -435,12 +435,12 @@ enum ShazamSignatureGenerator {
         return out
     }
 
-    static func appendLittleEndian16(_ out: inout [UInt8], _ value: UInt16) {
+    static func appendLittleEndian16(_ out: inout [UInt8], _ value: Int) {
         out.append(UInt8(value & 0xFF))
         out.append(UInt8((value >> 8) & 0xFF))
     }
 
-    static func appendLittleEndian32(_ out: inout [UInt8], _ value: UInt32) {
+    static func appendLittleEndian32(_ out: inout [UInt8], _ value: Int) {
         out.append(UInt8(value & 0xFF))
         out.append(UInt8((value >> 8) & 0xFF))
         out.append(UInt8((value >> 16) & 0xFF))
@@ -637,7 +637,7 @@ enum ShazamClient {
     // MARK: Response parsing (toRecognitionResult parity)
 
     static func parseResult(_ json: Any, recognizedAt: Double) -> RecognitionResult? {
-        guard let track = JSON.asDict(json["track"]) else { return nil }
+        guard let root = json as? [String: Any], let track = JSON.asDict(root["track"]) else { return nil }
         let trackId = JSON.asString(track["key"])?.description ?? UUID().uuidString
         let title = JSON.asString(track["title"]) ?? ""
         let artist = JSON.asString(track["subtitle"]) ?? ""
@@ -661,7 +661,8 @@ enum ShazamClient {
         var youtubeVideoId: String?
         if let hub = JSON.asDict(track["hub"]) {
             if let options = JSON.asArray(hub["options"]) {
-                for option in options {
+                for rawOption in options {
+                    guard let option = rawOption as? [String: Any] else { continue }
                     let provider = JSON.asString(option["providername"]) ?? ""
                     let uri = JSON.asString(option["uri"]) ?? ""
                     if provider.lowercased().contains("apple") {
@@ -675,10 +676,12 @@ enum ShazamClient {
             }
             // YouTube video actions (type contains "video").
             if youtubeVideoId == nil, let options = JSON.asArray(hub["options"]) {
-                for option in options {
+                for rawOption in options {
+                    guard let option = rawOption as? [String: Any] else { continue }
                     let type = JSON.asString(option["type"]) ?? ""
                     if type.lowercased().contains("video") {
-                        if let actions = JSON.asArray(option["actions"]), let action = actions.first {
+                        if let actions = JSON.asArray(option["actions"]), let rawAction = actions.first,
+                           let action = rawAction as? [String: Any] {
                             let uri = JSON.asString(action["uri"]) ?? ""
                             youtubeVideoId = Self.extractVideoId(from: uri)
                         }
@@ -692,10 +695,12 @@ enum ShazamClient {
         var label: String?
         var lyrics: [String]?
         if let sections = JSON.asArray(track["sections"]) {
-            for section in sections {
+            for rawSection in sections {
+                guard let section = rawSection as? [String: Any] else { continue }
                 let type = JSON.asString(section["type"]) ?? ""
                 if type == "SONG", let metadata = JSON.asArray(section["metadata"]) {
-                    for meta in metadata {
+                    for rawMeta in metadata {
+                        guard let meta = rawMeta as? [String: Any] else { continue }
                         let metaTitle = JSON.asString(meta["title"]) ?? ""
                         let metaText = JSON.asString(meta["text"]) ?? ""
                         if metaTitle == "Album" { album = metaText }

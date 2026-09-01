@@ -758,10 +758,12 @@ struct WavySlider: View {
         GeometryReader { geometry in
             let width = geometry.size.width
             ZStack(alignment: .leading) {
-                WavyWave(width: width, amplitude: 3, phase: 0, progress: 1)
+                WavyWave(amplitude: 3, phase: 0)
                     .stroke(pal.surfaceHighest, lineWidth: 3)
-                WavyWave(width: width, amplitude: 3.5, phase: 0.6, progress: CGFloat(progress))
+                WavyWave(amplitude: 3.5, phase: 0.6)
                     .stroke(pal.accent, lineWidth: 3)
+                    .frame(width: max(6, width * progress))
+                    .clipped()
             }
             .frame(height: 28)
             .contentShape(Rectangle())
@@ -782,31 +784,24 @@ struct WavySlider: View {
         .padding(.horizontal, 16)
     }
 
-    struct WavyWave: View {
-        let width: CGFloat
+    struct WavyWave: Shape {
         let amplitude: CGFloat
         let phase: Double
-        let progress: CGFloat
 
-        var body: some View {
-            Canvas { context, size in
-                var path = Path()
-                let steps = max(24, Int(size.width / 6))
-                let playableWidth = size.width * progress
-                for step in 0...steps {
-                    let x = CGFloat(step) / CGFloat(steps) * size.width
-                    let wavePhase = Double(x / 22) + phase
-                    let y = size.height / 2 + sin(wavePhase) * amplitude
-                    if step == 0 {
-                        path.move(to: CGPoint(x: x, y: y))
-                    } else {
-                        path.addLine(to: CGPoint(x: x, y: y))
-                    }
+        func path(in rect: CGRect) -> Path {
+            var path = Path()
+            let steps = max(24, Int(rect.width / 6))
+            for step in 0...steps {
+                let x = CGFloat(step) / CGFloat(steps) * rect.width
+                let wavePhase = Double(x / 22) + phase
+                let y = rect.midY + CGFloat(sin(wavePhase)) * amplitude
+                if step == 0 {
+                    path.move(to: CGPoint(x: x, y: y))
+                } else {
+                    path.addLine(to: CGPoint(x: x, y: y))
                 }
-                context.stroke(path, with: .color(.primary.opacity(0.9)), style: StrokeStyle(lineWidth: 3, lineCap: .round))
             }
-            .frame(width: max(0, min(width, width)))
-            .clipped()
+            return path
         }
     }
 }
@@ -955,9 +950,7 @@ struct MediaInfoSheet: View {
                         if let dislikes = info.dislikeCount { infoRow("Dislikes (est.)", "\(dislikes)") }
                         if let subs = info.subscriberCount { infoRow("Subscribers", subs) }
                         if let codec = player.currentCodec {
-                            var bitrate = ""
-                            if let b = player.currentBitrate { bitrate = " · \(b / 1000) kb/s" }
-                            infoRow("Stream", "AAC\(bitrate)")
+                            infoRow("Stream", Self.streamDescription(codec, bitrate: player.currentBitrate, sampleRate: player.currentSampleRate))
                         }
                     }
                     .padding(16)
@@ -990,5 +983,12 @@ struct MediaInfoSheet: View {
                 .multilineTextAlignment(.trailing)
         }
         .padding(.vertical, 4)
+    }
+
+    static func streamDescription(_ codec: String, bitrate: Int?, sampleRate: Int?) -> String {
+        var parts: [String] = ["AAC"]
+        if let b = bitrate { parts.append("\(b / 1000) kb/s") }
+        if let r = sampleRate { parts.append("\(r / 1000) kHz") }
+        return parts.joined(separator: " · ")
     }
 }

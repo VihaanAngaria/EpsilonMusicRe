@@ -146,7 +146,7 @@ struct StatsView: View {
                     Text("\(rank)")
                         .font(.system(size: 13, weight: .bold).monospacedDigit())
                         .foregroundStyle(.white)
-                        .padding(6, 10)
+                        .padding(EdgeInsets(top: 6, leading: 10, bottom: 6, trailing: 10))
                         .background(Capsule().fill(pal.accent))
                         .padding(6)
                 }
@@ -219,7 +219,7 @@ struct StatsView: View {
                 Text("\(rank)")
                     .font(.system(size: 12, weight: .bold).monospacedDigit())
                     .foregroundStyle(.white)
-                    .padding(5, 9)
+                    .padding(EdgeInsets(top: 5, leading: 9, bottom: 5, trailing: 9))
                     .background(Capsule().fill(pal.accent))
                     .padding(5)
             }

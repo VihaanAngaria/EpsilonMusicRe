@@ -40,7 +40,7 @@ final class Updater: ObservableObject {
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
         guard let (data, response) = try? await URLSession.shared.data(for: request),
               (response as? HTTPURLResponse)?.statusCode == 200,
-              let json = JSON.parse(data) else {
+              let parsed = JSON.parse(data), let json = parsed as? [String: Any] else {
             lastError = "Couldn't reach GitHub for the latest release."
             return
         }
@@ -52,10 +52,11 @@ final class Updater: ObservableObject {
         var downloadUrl: String?
         var downloadSize: Int?
         for asset in JSON.asArray(json["assets"]) ?? [] {
-            let name = JSON.asString(asset["name"]) ?? ""
+            guard let assetDict = asset as? [String: Any] else { continue }
+            let name = JSON.asString(assetDict["name"]) ?? ""
             if name.lowercased().hasSuffix(".ipa") || name.lowercased().hasSuffix(".zip") || name.lowercased().contains("ios") {
-                downloadUrl = JSON.asString(asset["browser_download_url"])
-                downloadSize = JSON.asInt(asset["size"])
+                downloadUrl = JSON.asString(assetDict["browser_download_url"])
+                downloadSize = JSON.asInt(assetDict["size"])
                 break
             }
         }
@@ -66,14 +67,16 @@ final class Updater: ObservableObject {
         var changelog: [(String, [String])] = []
         var imageUrl: String?
         // changelog.json asset (Android format).
-        if let changelogAsset = (JSON.asArray(json["assets"]) ?? []).first(where: { JSON.asString($0["name"]) == "changelog.json" }),
+        if let changelogAsset = (JSON.asArray(json["assets"]) ?? []).compactMap({ $0 as? [String: Any] }).first(where: { JSON.asString($0["name"]) == "changelog.json" }),
            let changelogUrl = JSON.asString(changelogAsset["browser_download_url"]) {
-            if let (_, cj) = await LyricsHTTP.get(url: changelogUrl, timeout: 15) {
+            if let (_, cjParsed) = await LyricsHTTP.get(url: changelogUrl, timeout: 15),
+               let cj = cjParsed as? [String: Any] {
                 imageUrl = JSON.asString(cj["image"])
                 if let sections = JSON.asArray(cj["changelog"]) {
                     for section in sections {
-                        let title = JSON.asString(section["title"]) ?? ""
-                        let items = (JSON.asArray(section["items"]) ?? []).compactMap { JSON.asString($0) }
+                        guard let sectionDict = section as? [String: Any] else { continue }
+                        let title = JSON.asString(sectionDict["title"]) ?? ""
+                        let items = (JSON.asArray(sectionDict["items"]) ?? []).compactMap { JSON.asString($0) }
                         changelog.append((title, items))
                     }
                 }
@@ -201,7 +204,8 @@ enum CanvasProvider {
               let items = JSON.asArray(JSON.dig(json, "items")) else { return nil }
         let normalizedTitle = normalize(title)
         let normalizedArtist = normalize(artist)
-        for item in items {
+        for rawItem in items {
+            guard let item = rawItem as? [String: Any] else { continue }
             let song = normalize(JSON.asString(item["song"]) ?? "")
             let songArtist = normalize(JSON.asString(item["artist"]) ?? "")
             let url = JSON.asString(item["url"])
@@ -241,18 +245,20 @@ enum CanvasProvider {
         }
         guard !query.isEmpty else { return nil }
         let itunesUrl = "https://itunes.apple.com/search?media=music&entity=album&term=\(urlEscaped(query))&limit=5"
-        guard let (_, json) = await LyricsHTTP.get(url: itunesUrl, timeout: 10),
+        guard let (_, parsed) = await LyricsHTTP.get(url: itunesUrl, timeout: 10),
+              let json = parsed as? [String: Any],
               let results = JSON.asArray(json["results"]) else { return nil }
         var albumId: String?
         for result in results {
-            let candidateArtist = normalize(JSON.asString(result["artistName"]) ?? "")
-            let candidateAlbum = normalize(JSON.asString(result["collectionName"]) ?? "")
+            guard let resultDict = result as? [String: Any] else { continue }
+            let candidateArtist = normalize(JSON.asString(resultDict["artistName"]) ?? "")
+            let candidateAlbum = normalize(JSON.asString(resultDict["collectionName"]) ?? "")
             let wantedArtist = normalize(artist)
             let wantedAlbum = normalize(album ?? "")
             let artistOk = wantedArtist.isEmpty || candidateArtist.contains(wantedArtist) || wantedArtist.contains(candidateArtist)
             let albumOk = wantedAlbum.isEmpty || candidateAlbum.contains(wantedAlbum) || wantedAlbum.contains(candidateAlbum)
             if (artistOk && albumOk) || albumId == nil {
-                albumId = JSON.asString(result["collectionId"])
+                albumId = JSON.asString(resultDict["collectionId"])
             }
         }
         guard let id = albumId else { return nil }
