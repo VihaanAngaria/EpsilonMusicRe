@@ -1,4 +1,5 @@
 import SwiftUI
+import WebKit
 
 // MARK: - Discord settings (DiscordSettings.kt parity)
 
