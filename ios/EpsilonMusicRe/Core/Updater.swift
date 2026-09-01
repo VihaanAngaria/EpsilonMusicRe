@@ -270,7 +270,7 @@ enum CanvasProvider {
               (response as? HTTPURLResponse)?.statusCode == 200,
               let json = JSON.parse(data) else { return nil }
         if let video = JSON.dig(json, "data", 0, "attributes", "editorialVideo") {
-            let motion = JSON.asDict(JSON.dig(video, "motionDetailSquare")) ?? JSON.asDict(JSON.dig(video, "standardSquare"))
+            let motion = JSON.asDict(JSON.dig(video, "motionDetailSquare")) ?? JSON.asDict(JSON.dig(video, "standardSquare")) ?? [:]
             let videoUrl = JSON.asString(JSON.dig(motion, "video")) ?? JSON.asString(motion["previewVideo"])
             let artwork = JSON.asString(JSON.dig(json, "data", 0, "attributes", "artwork", "url"))?
                 .replacingOccurrences(of: "{w}", with: "1000")

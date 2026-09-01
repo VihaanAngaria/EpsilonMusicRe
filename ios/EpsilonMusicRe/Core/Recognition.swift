@@ -64,7 +64,8 @@ final class MicRecorder: ObservableObject {
             if isFloatFormat, let floatData = buffer.floatChannelData {
                 let floats = UnsafeBufferPointer(start: floatData[0], count: frames)
                 chunk = floats.map { Int16(max(-32768, min(32767, Int($0 * 32767)))) }
-            } else if let int16Data = buffer.int16ChannelData, let channel = int16Data[0] {
+            } else if let int16Data = buffer.int16ChannelData {
+                let channel = int16Data[0]
                 chunk = Array(UnsafeBufferPointer(start: channel, count: frames))
             } else {
                 return
