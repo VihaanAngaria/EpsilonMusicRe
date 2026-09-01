@@ -28,6 +28,7 @@ Epsilon Music delivers a seamless, premium listening experience by leveraging Yo
 - [Screenshots](#screenshots)
 - [Features](#features)
 - [Installation & Setup](#installation--setup)
+- [iOS App](#ios-app)
 - [Translations](#translations)
 - [Community & Support](#community--support)
 - [Support the Project](#support-the-project)
@@ -215,6 +216,19 @@ Download the latest pre-compiled APK from the [Releases Page](https://github.com
 ---
 
 
+
+## iOS App
+
+Epsilon Music also ships a **native iOS app** (SwiftUI) in [`ios/`](ios/) — same logo, dark surfaces and red accent, with Home / Library / full-screen Player, lock-screen controls, and playback of your device music library (plus bundled demo tracks). The project file is generated with [XcodeGen](https://github.com/yonaskolb/XcodeGen):
+
+```bash
+brew install xcodegen
+cd ios && xcodegen generate && open EpsilonMusicRe.xcodeproj
+```
+
+See [`ios/README.md`](ios/README.md) for details. iOS CI builds the app for the simulator on every `ios/` change.
+
+---
 
 ## Translations
 

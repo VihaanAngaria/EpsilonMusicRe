@@ -1,0 +1,66 @@
+name: iOS CI
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "ios/**"
+      - ".github/workflows/ios-build.yml"
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - "ios/**"
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build iOS App (Simulator)
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Install XcodeGen
+      run: brew install xcodegen
+
+    - name: Generate Xcode Project
+      working-directory: ios
+      run: xcodegen generate
+
+    - name: Show Build Environment
+      working-directory: ios
+      run: |
+        xcodebuild -version
+        xcodebuild -list -project EpsilonMusicRe.xcodeproj
+
+    - name: Build (iOS Simulator, no code signing)
+      working-directory: ios
+      run: |
+        set -o pipefail
+        xcodebuild -project EpsilonMusicRe.xcodeproj \
+          -scheme EpsilonMusicRe \
+          -destination 'generic/platform=iOS Simulator' \
+          -configuration Debug \
+          -derivedDataPath build \
+          CODE_SIGNING_ALLOWED=NO \
+          build
+
+    - name: Locate Built App
+      working-directory: ios
+      run: |
+        find build/Build/Products -name "*.app" -maxdepth 3 -type d || true
+
+    - name: Upload Simulator App
+      if: success()
+      uses: actions/upload-artifact@v4
+      with:
+        name: Epsilon-MusicRe-iOS-Simulator-App
+        path: ios/build/Build/Products/Debug-iphonesimulator/*.app
+        if-no-files-found: warn
+        retention-days: 30
+
+    - name: Summary
+      run: |
+        echo "### iOS build result" >> $GITHUB_STEP_SUMMARY
+        echo "Built EpsilonMusicRe.app for the iOS Simulator (unsigned). Open the repo in Xcode to run on a device." >> $GITHUB_STEP_SUMMARY
