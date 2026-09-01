@@ -51,6 +51,7 @@ final class MicRecorder: ObservableObject {
         let format = input.outputFormat(forBus: 0)
         sampleRate = format.sampleRate > 0 ? format.sampleRate : 44100
         let totalFrames = Int(seconds * sampleRate)
+        let isFloatFormat = format.commonFormat == .pcmFormatFloat32
 
         let group = DispatchGroup()
         group.enter()
@@ -59,11 +60,16 @@ final class MicRecorder: ObservableObject {
         input.installTap(onBus: 0, bufferSize: 4096, format: format) { [weak self] buffer, _ in
             let frames = Int(buffer.frameLength)
             guard frames > 0 else { return }
-            if let data = UnsafeMutableAudioBufferListPointer(buffer.audioBufferList).first?.mData {
-                let pointer = data.assumingMemoryBound(to: Int16.self)
-                let chunk = UnsafeBufferPointer(start: pointer, count: frames)
-                collected.append(Array(chunk))
+            var chunk: [Int16] = []
+            if isFloatFormat, let floatData = buffer.floatChannelData {
+                let floats = UnsafeBufferPointer(start: floatData[0], count: frames)
+                chunk = floats.map { Int16(max(-32768, min(32767, Int($0 * 32767)))) }
+            } else if let int16Data = buffer.int16ChannelData, let channel = int16Data[0] {
+                chunk = Array(UnsafeBufferPointer(start: channel, count: frames))
+            } else {
+                return
             }
+            collected.append(chunk)
             Task { @MainActor in
                 self?.elapsed = Date().timeIntervalSince(self?.startedAt ?? Date())
                 self?.level = Double(frames) / 4096.0

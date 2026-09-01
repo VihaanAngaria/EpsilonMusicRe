@@ -282,10 +282,10 @@ final class EqualizerEngine: ObservableObject {
                     Unmanaged<EQTapStateHolder>.fromOpaque(storage).release()
                 }
             },
-            prepare: { tap, _, formatDescription in
+            prepare: { tap, _, format in
                 guard let storage = MTAudioProcessingTapGetStorage(tap) else { return }
                 let holder = Unmanaged<EQTapStateHolder>.fromOpaque(storage).takeUnretainedValue()
-                epsTapPrepare(state: holder.state, formatDescription: formatDescription)
+                epsTapPrepare(state: holder.state, format: format)
             },
             unprepare: { _ in },
             process: { tap, numberFrames, _, bufferList, _, _ in
@@ -306,16 +306,15 @@ private final class EQTapStateHolder {
     init(_ state: DSPState) { self.state = state }
 }
 
-/// Render-thread prepare: capture stream format from CMFormatDescription.
-private func epsTapPrepare(state: DSPState, formatDescription: CMFormatDescription) {
+/// Render-thread prepare: capture the stream format (ASBD pointer callback).
+private func epsTapPrepare(state: DSPState, format: UnsafePointer<AudioStreamBasicDescription>) {
     state.lock.lock()
     defer { state.lock.unlock() }
-    if let asbd = CMAudioFormatDescriptionGetStreamBasicDescription(formatDescription) {
-        state.sampleRate = asbd.pointee.mSampleRate
-        state.channels = Int(asbd.pointee.mChannelsPerFrame)
-        state.isFloat = asbd.pointee.mFormatFlags & kAudioFormatFlagIsFloat != 0
-        state.isInterleaved = asbd.pointee.mFormatFlags & kAudioFormatFlagIsNonInterleaved == 0
-    }
+    let asbd = format.pointee
+    state.sampleRate = asbd.mSampleRate
+    state.channels = Int(asbd.mChannelsPerFrame)
+    state.isFloat = asbd.mFormatFlags & kAudioFormatFlagIsFloat != 0
+    state.isInterleaved = asbd.mFormatFlags & kAudioFormatFlagIsNonInterleaved == 0
     state.silenceFrames = 0
     state.isSilent = false
 }
@@ -432,7 +431,8 @@ extension AVPlayerItem {
         guard engine.enabled || engine.normalizationEnabled || engine.skipSilence else { return item }
         guard let tap = engine.makeTap() else { return item }
         let mix = AVMutableAudioMix()
-        let params = AVMutableAudioMixInputParameters(trackID: CMPersistentTrackID(0))
+        let params = AVMutableAudioMixInputParameters()
+        params.trackID = 0
         params.audioTapProcessor = tap
         mix.inputParameters = [params]
         item.audioMix = mix

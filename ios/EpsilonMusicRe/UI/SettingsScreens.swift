@@ -685,7 +685,7 @@ struct CSVImportView: View {
             let line = rawLine.trimmingCharacters(in: .whitespaces)
             if line.hasPrefix("#EXTINF:") {
                 // #EXTINF:duration,Artist - Title
-                let parts = String(line.dropFirst("#EXTINF:".count)).components(separatedBy: ",", maxSplits: 1)
+                let parts = String(line.dropFirst("#EXTINF:".count)).split(separator: ",", maxSplits: 1, omittingEmptySubsequences: false).map(String.init)
                 if parts.count == 2 {
                     let entry = parts[1]
                     if let dash = entry.range(of: " - ") {
