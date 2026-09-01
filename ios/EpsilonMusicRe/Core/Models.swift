@@ -98,7 +98,7 @@ struct LocalPlaylist: Identifiable, Codable, Equatable {
 
 // MARK: - Grid item (home/explore carousels)
 
-enum GridItem: Identifiable {
+enum MediaGridItem: Identifiable {
     case song(Song)
     case artist(ArtistItem)
     case album(AlbumItem)
@@ -146,7 +146,7 @@ enum GridItem: Identifiable {
 struct Shelf: Identifiable {
     var title: String
     var subtitle: String?
-    var items: [GridItem]
+    var items: [MediaGridItem]
 
     var id: String { title }
 }

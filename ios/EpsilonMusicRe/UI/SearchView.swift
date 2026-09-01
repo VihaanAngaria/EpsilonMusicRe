@@ -14,7 +14,7 @@ struct SearchView: View {
     @State private var submittedQuery = ""
     @State private var filter: SearchFilter = .songs
     @State private var suggestions: [String] = []
-    @State private var results: [GridItem] = []
+    @State private var results: [MediaGridItem] = []
     @State private var continuation: String?
     @State private var isLoading = false
     @State private var isLoadingMore = false
@@ -215,7 +215,7 @@ struct SearchView: View {
     }
 
     @ViewBuilder
-    private func resultRow(_ item: GridItem, index: Int) -> some View {
+    private func resultRow(_ item: MediaGridItem, index: Int) -> some View {
         let songs = results.compactMap { if case .song(let s) = $0 { return s } else { return nil } }
         switch item {
         case .song(let song):

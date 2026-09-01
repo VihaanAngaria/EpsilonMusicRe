@@ -115,7 +115,7 @@ enum SearchFilter: String, CaseIterable, Identifiable {
 }
 
 struct SearchResult {
-    var items: [GridItem]
+    var items: [MediaGridItem]
     var songs: [Song]
     var continuation: String?
 }
@@ -474,9 +474,9 @@ final class InnerTube {
     }
 
     /// Moods & genres categories (colored tiles in the Android app).
-    func moodsAndGenres() async throws -> [GridItem] {
+    func moodsAndGenres() async throws -> [MediaGridItem] {
         let json = try await post("browse", body: remixBody(["browseId": "FEmusic_moods_and_genres"]), client: YTClients.webRemix)
-        var items: [GridItem] = []
+        var items: [MediaGridItem] = []
         let sections = JSON.asArray(JSON.dig(json, "contents", "singleColumnBrowseResultsRenderer", "tabs", 0, "tabRenderer", "content", "sectionListRenderer", "contents")) ?? []
         for section in sections {
             guard let grid = JSON.dig(section, "gridRenderer") else { continue }
@@ -577,9 +577,9 @@ final class InnerTube {
                     isLocal: false, localKey: nil, isDemo: false)
     }
 
-    // MARK: GridItem from musicTwoRowItemRenderer
+    // MARK: MediaGridItem from musicTwoRowItemRenderer
 
-    static func parseTwoRowItem(_ renderer: Any) -> GridItem? {
+    static func parseTwoRowItem(_ renderer: Any) -> MediaGridItem? {
         let title = runsText(JSON.dig(renderer, "title", "runs")) ?? JSON.asString(JSON.dig(renderer, "title", "text"))
         guard let title = title, !title.isEmpty else { return nil }
         let subtitle = runsText(JSON.dig(renderer, "subtitle", "runs")) ?? JSON.asString(JSON.dig(renderer, "subtitle", "text"))
@@ -607,7 +607,7 @@ final class InnerTube {
         return classifyBrowse(browseId: browseId, pageType: pageType, title: title, subtitle: subtitle, thumbnail: thumb)
     }
 
-    static func classifyBrowse(browseId: String, pageType: String, title: String, subtitle: String?, thumbnail: String?) -> GridItem? {
+    static func classifyBrowse(browseId: String, pageType: String, title: String, subtitle: String?, thumbnail: String?) -> MediaGridItem? {
         if browseId.isEmpty { return nil }
         let comps = (subtitle ?? "").components(separatedBy: " • ").filter { !$0.isEmpty }
         if pageType.contains("ARTIST") || browseId.hasPrefix("UC") {
@@ -624,9 +624,9 @@ final class InnerTube {
         return .playlist(PlaylistItem(browseId: browseId, title: title, owner: owner, countText: countText, thumbnail: thumbnail, isLocal: false))
     }
 
-    // MARK: musicResponsiveListItemRenderer -> generic GridItem (search lists, shelves)
+    // MARK: musicResponsiveListItemRenderer -> generic MediaGridItem (search lists, shelves)
 
-    static func parseListItem(_ renderer: Any) -> GridItem? {
+    static func parseListItem(_ renderer: Any) -> MediaGridItem? {
         // Song?
         if let song = parseListItemSong(renderer) {
             // If the item navigates to a browse page, prefer the browse classification.
@@ -692,7 +692,7 @@ final class InnerTube {
                 }
             } else if let shelf = JSON.dig(section, "musicShelfRenderer") {
                 let title = runsText(JSON.dig(shelf, "title", "runs")) ?? "Songs"
-                var items: [GridItem] = []
+                var items: [MediaGridItem] = []
                 if let list = JSON.asArray(JSON.dig(shelf, "contents")) {
                     for item in list {
                         if let renderer = JSON.dig(item, "musicResponsiveListItemRenderer"),
@@ -711,7 +711,7 @@ final class InnerTube {
 
     static func parseCarouselShelf(_ shelf: Any) -> Shelf? {
         let title = runsText(JSON.dig(shelf, "header", "musicCarouselShelfBasicHeaderRenderer", "title", "runs")) ?? ""
-        var items: [GridItem] = []
+        var items: [MediaGridItem] = []
         if let contents = JSON.asArray(JSON.dig(shelf, "contents")) {
             for content in contents {
                 if let two = JSON.dig(content, "musicTwoRowItemRenderer") {
@@ -746,7 +746,7 @@ final class InnerTube {
     // MARK: Search parsing
 
     func parseSearch(_ json: Any) throws -> SearchResult {
-        var items: [GridItem] = []
+        var items: [MediaGridItem] = []
         var songs: [Song] = []
         var continuation: String?
 

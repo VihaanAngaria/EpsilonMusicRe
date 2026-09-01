@@ -577,8 +577,8 @@ struct TopTracksView: View {
                     .padding(.vertical, 10)
                     ForEach(Array(top.enumerated()), id: \.element.id) { index, song in
                         SongRow(song: song, showIndex: index + 1,
-                                subtitleOverride: "\(song.subtitle) • \(library.playCount(for: song)) plays",
-                                isCurrent: player.currentSong?.id == song.id) { tapped, _ in
+                                isCurrent: player.currentSong?.id == song.id,
+                                subtitleOverride: "\(song.subtitle) • \(library.playCount(for: song)) plays") { tapped, _ in
                             player.play(tapped, queue: top, sourceName: "My top tracks")
                         }
                     }
@@ -731,7 +731,7 @@ struct ExploreView: View {
 struct MoodsView: View {
     @Environment(\.epsPalette) private var pal
 
-    @State private var items: [GridItem] = []
+    @State private var items: [MediaGridItem] = []
     @State private var isLoading = true
     @State private var errorText: String?
 
@@ -781,7 +781,7 @@ struct MoodsView: View {
         .task { if items.isEmpty { load() } }
     }
 
-    private func moodRoute(_ item: GridItem) -> Route {
+    private func moodRoute(_ item: MediaGridItem) -> Route {
         switch item {
         case .playlist(let p): return .onlinePlaylist(p)
         case .album(let a): return .album(a)

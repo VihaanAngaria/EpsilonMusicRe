@@ -113,7 +113,7 @@ struct SongThumb: View {
             }
         }
         .frame(width: size, height: size)
-        .clipShape(circle ? Circle() : RoundedRectangle(cornerRadius: corner, style: .continuous))
+        .clipShape(circle ? AnyShape(Circle()) : AnyShape(RoundedRectangle(cornerRadius: corner, style: .continuous)))
     }
 
     private var placeholder: some View {
@@ -310,7 +310,7 @@ struct ItemShelf: View {
     }
 
     @ViewBuilder
-    private func shelfCard(_ item: GridItem) -> some View {
+    private func shelfCard(_ item: MediaGridItem) -> some View {
         let songsInShelf = shelf.items.compactMap { if case .song(let s) = $0 { return s } else { return nil } }
         switch item {
         case .song(let song):
