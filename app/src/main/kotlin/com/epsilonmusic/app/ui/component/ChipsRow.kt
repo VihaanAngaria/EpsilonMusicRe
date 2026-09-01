@@ -81,7 +81,7 @@ fun <E> ChipsRow(
 
             
             val cornerRadius by animateDpAsState(
-                targetValue = if (isSelected) 16.dp else 10.dp,
+                targetValue = if (isSelected) 20.dp else 8.dp,
                 animationSpec = spring(
                     dampingRatio = Spring.DampingRatioMediumBouncy,
                     stiffness = Spring.StiffnessMedium
@@ -94,8 +94,6 @@ fun <E> ChipsRow(
                 selected = isSelected,
                 colors = FilterChipDefaults.filterChipColors(
                     containerColor = containerColor,
-                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 ),
                 onClick = { onValueUpdate(value) },
                 leadingIcon = if (isSelected) {
@@ -230,7 +228,7 @@ fun <Int> ChoiceChipsRow(
                 val isSelected = currentValue == value
 
                 val cornerRadius by animateDpAsState(
-                    targetValue = if (isSelected) 16.dp else 10.dp,
+                    targetValue = if (isSelected) 20.dp else 8.dp,
                     animationSpec = spring(
                         dampingRatio = Spring.DampingRatioMediumBouncy,
                         stiffness = Spring.StiffnessMedium
@@ -243,8 +241,6 @@ fun <Int> ChoiceChipsRow(
                     selected = isSelected,
                     colors = FilterChipDefaults.filterChipColors(
                         containerColor = containerColor,
-                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
                     ),
                     onClick = { onValueUpdate(value) },
                     leadingIcon = if (isSelected) {
