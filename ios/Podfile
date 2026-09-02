@@ -33,6 +33,12 @@ target 'Runner' do
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
 
+  # share_handler_ios depends on the unpublished `share_handler_ios_models`
+  # pod, which ships inside the share_handler_ios package itself and is not
+  # on the CocoaPods CDN (required for iOS share-in support).
+  pod 'share_handler_ios_models',
+      :path => '.symlinks/plugins/share_handler_ios/ios/Models'
+
   target 'RunnerTests' do
     inherit! :search_paths
   end
