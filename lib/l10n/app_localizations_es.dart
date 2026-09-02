@@ -78,6 +78,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get localMusicAddFolder => 'Añadir carpeta de música';
 
   @override
+  String get localMusicImportMusic => 'Importar música';
+
+  @override
   String get localMusicScanNow => 'Escanear ahora';
 
   @override

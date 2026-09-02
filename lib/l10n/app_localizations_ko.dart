@@ -76,6 +76,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get localMusicAddFolder => '음악 폴더 추가';
 
   @override
+  String get localMusicImportMusic => '음악 가져오기';
+
+  @override
   String get localMusicScanNow => '지금 스캔';
 
   @override

@@ -55,9 +55,26 @@ class _LocalMusicSettingsState extends State<LocalMusicSettings> {
   }
 
   Future<void> _addFolder() async {
+    if (Platform.isIOS) {
+      // iOS: multi-file audio pick. The system picker imports the files into
+      // the app sandbox; they are then moved into Documents/LocalMusic and
+      // scanned (picked folders themselves are only readable during the
+      // current session on iOS).
+      setState(() => _scanning = true);
+      try {
+        await _cubit.importMusicFilesIOS();
+        final lastScan = await _cubit.getLastScan();
+        if (mounted) setState(() => _lastScan = lastScan);
+      } finally {
+        if (mounted) setState(() => _scanning = false);
+      }
+      final folders = await _cubit.getFolders();
+      if (mounted) setState(() => _folders = folders);
+      return;
+    }
     final path = await FilePicker.platform.getDirectoryPath();
     if (path == null) return;
-    await _cubit.addFolder(path);
+    await _cubit.addPickedFolder(path);
     final folders = await _cubit.getFolders();
     if (mounted) setState(() => _folders = folders);
   }
@@ -203,8 +220,8 @@ class _LocalMusicSettingsState extends State<LocalMusicSettings> {
             ],
           ),
 
-          // Folder management — desktop only
-          if (!LocalMusicService.isMobile && !Platform.isIOS) ...[
+          // Folder management — desktop + iOS (Android uses MediaStore auto-scan)
+          if (!LocalMusicService.isMobile) ...[
             const SizedBox(height: 28),
             SettingSectionHeader(label: l10n.settingsMusicFolders),
             SettingCard(
@@ -300,7 +317,9 @@ class _LocalMusicSettingsState extends State<LocalMusicSettings> {
                           ),
                           const SizedBox(width: 14),
                           Text(
-                            l10n.localSettingAddFolder,
+                            Platform.isIOS
+                                ? l10n.localMusicImportMusic
+                                : l10n.localSettingAddFolder,
                             style: const TextStyle(
                               color: Default_Theme.accentColor2,
                               fontSize: 16,

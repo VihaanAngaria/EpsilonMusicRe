@@ -443,7 +443,7 @@ class LocalMusicService {
         ) ??
         '';
   }
-  // ── Folder management (desktop only) ───────────────────────────────────────
+  // ── Folder management (desktop + iOS) ─────────────────────────────────────
 
   Future<List<String>> getFolders() async {
     if (isMobile) return [];
@@ -472,6 +472,154 @@ class LocalMusicService {
     final folders = await getFolders();
     folders.remove(path);
     await _saveFolders(folders);
+  }
+
+  // ── iOS import ─────────────────────────────────────────────────────────────
+
+  /// Directory (inside the app sandbox) where imported music lives on iOS.
+  /// Files are copied here because iOS only grants transient,
+  /// security-scoped access to user-picked folders.
+  static const String iosImportDirName = 'LocalMusic';
+
+  /// Extensions treated as importable audio — mirrors the Rust scanner's
+  /// AUDIO_EXTENSIONS set (rust/src/api/local_music.rs).
+  static const Set<String> _importableAudioExtensions = {
+    'mp3',
+    'flac',
+    'm4a',
+    'ogg',
+    'opus',
+    'wav',
+    'aac',
+    'aiff',
+    'wv',
+    'ape',
+    'mpc',
+    'oga',
+    'spx',
+    'wma',
+    'webm',
+  };
+
+  /// Imports a folder picked with the iOS document picker.
+  ///
+  /// iOS revokes access to picked folders once the app restarts, so the
+  /// audio files are copied into `<Documents>/LocalMusic/<folder name>`
+  /// (app-owned and permanently readable) and that directory is registered
+  /// for scanning. Re-importing the same folder only copies new or changed
+  /// files. Returns the path registered for scanning.
+  Future<String> importFolderFromIOS(String pickedPath) async {
+    final docsDir = await getApplicationDocumentsDirectory();
+    final baseDir = Directory(p.join(docsDir.path, iosImportDirName));
+    final baseAbs = p.normalize(baseDir.path);
+    final pickedAbs = p.normalize(pickedPath);
+
+    // Picking our own import folder (browsed via the Files app): the path is
+    // already app-owned, so register it directly without copying.
+    if (pickedAbs == baseAbs || pickedAbs.startsWith('$baseAbs/')) {
+      await addFolder(pickedAbs);
+      return pickedAbs;
+    }
+
+    final sourceDir = Directory(pickedAbs);
+    if (!sourceDir.existsSync()) {
+      throw const FileSystemException('Selected folder not accessible');
+    }
+
+    var folderName = p.basename(pickedAbs).trim();
+    if (folderName.isEmpty) folderName = 'Imported';
+    folderName = folderName
+        .replaceAll(RegExp(r'[/\\:*?"<>|]'), '_')
+        .replaceAll(RegExp(r'\s+'), ' ');
+    if (folderName.length > 60) folderName = folderName.substring(0, 60);
+
+    final destDir = Directory(p.join(baseAbs, folderName));
+    await destDir.create(recursive: true);
+
+    var copied = 0;
+    final entities = sourceDir.listSync(recursive: true, followLinks: false);
+    for (final entity in entities) {
+      if (entity is! File) continue;
+      final ext =
+          p.extension(entity.path).toLowerCase().replaceFirst('.', '');
+      if (!_importableAudioExtensions.contains(ext)) continue;
+
+      final relative = p.relative(entity.path, from: pickedAbs);
+      final target = File(p.join(destDir.path, relative));
+      await target.parent.create(recursive: true);
+      final targetExists = await target.exists();
+      if (!targetExists ||
+          (await target.length()) != (await entity.length())) {
+        await entity.copy(target.path);
+        copied++;
+      }
+    }
+
+    log('iOS import: $copied new file(s) copied into ${destDir.path}',
+        name: 'LocalMusicService');
+    // Register the import ROOT (not the subfolder) so the scanner never
+    // walks the same files twice when multiple imports live under it.
+    await _ensureRootRegistered(baseDir);
+    return baseAbs;
+  }
+
+  /// Moves audio files picked with the iOS document picker into
+  /// `<Documents>/LocalMusic/Imported` and registers the import root for
+  /// scanning. The system picker delivers picked files into a temp
+  /// directory inside the sandbox, so a move is safe and permanent.
+  /// Returns the path of the import root.
+  Future<String> importAudioFilesFromIOS(List<String> paths) async {
+    final docsDir = await getApplicationDocumentsDirectory();
+    final baseDir = Directory(p.join(docsDir.path, iosImportDirName));
+    final destDir =
+        Directory(p.join(baseDir.path, 'Imported'));
+    await destDir.create(recursive: true);
+
+    var imported = 0;
+    for (final sourcePath in paths) {
+      final source = File(sourcePath);
+      if (!source.existsSync()) continue;
+      final target = File(p.join(destDir.path, p.basename(sourcePath)));
+      try {
+        if (target.existsSync()) {
+          if ((await target.length()) == (await source.length())) {
+            continue;
+          }
+          await target.delete();
+        }
+        await source.rename(target.path);
+        imported++;
+      } catch (_) {
+        // Rename can fail across volumes — fall back to copy + delete.
+        try {
+          await source.copy(target.path);
+          await source.delete();
+          imported++;
+        } catch (e) {
+          log('Failed to import ${p.basename(sourcePath)}: $e',
+              name: 'LocalMusicService');
+        }
+      }
+    }
+
+    log('iOS import: $imported file(s) moved into ${destDir.path}',
+        name: 'LocalMusicService');
+    await _ensureRootRegistered(baseDir);
+    return p.normalize(baseDir.path);
+  }
+
+  /// Registers the iOS import root for scanning without duplicating paths
+  /// that are already covered by it (the scanner does not dedupe overlapping
+  /// directories).
+  Future<void> _ensureRootRegistered(Directory baseDir) async {
+    final rootAbs = p.normalize(baseDir.path);
+    final folders = await getFolders();
+    if (folders.contains(rootAbs)) return;
+    // Drop any nested child of the import root before adding the root.
+    final cleaned =
+        folders.where((f) => f != rootAbs && !f.startsWith('$rootAbs/')).toList();
+    cleaned.add(rootAbs);
+    await _saveFolders(cleaned);
   }
 
   // ── Private ─────────────────────────────────────────────────────────────────
@@ -576,6 +724,17 @@ class LocalMusicService {
 
   Future<List<String>> _defaultDesktopFolders() async {
     final dirs = <String>[];
+    if (Platform.isIOS) {
+      // iOS: only the app-sandbox import directory is durable and
+      // accessible. Audio files land there via importFolderFromIOS() or via
+      // the Files app (UIFileSharingEnabled exposes Documents).
+      final docs = await getApplicationDocumentsDirectory();
+      final imported = Directory(p.join(docs.path, iosImportDirName));
+      if (imported.existsSync()) {
+        dirs.add(imported.path);
+      }
+      return dirs;
+    }
     if (Platform.isWindows) {
       final userProfile = Platform.environment['USERPROFILE'];
       if (userProfile != null) {

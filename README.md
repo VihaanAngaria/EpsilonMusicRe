@@ -9,7 +9,7 @@
 <p align="center"><img src=https://img.shields.io/sourceforge/dt/bloomee?style=for-the-badge&logoSize=auto&label=DOWNLOADS(SF)
  /> <a href="https://github.com/HemantKArya/BloomeeTunes/releases/latest"><img alt="GitHub Downloads (all assets, all releases)" src="https://img.shields.io/github/downloads/HemantKArya/BloomeeTunes/total?style=for-the-badge&label=DOWNLOADS(GH)" >
 <img alt="GitHub Release" src="https://img.shields.io/github/v/release/HemantKArya/BloomeeTunes?display_name=release&style=for-the-badge&color=f01d7c" ></a>
-<img alt="GitHub License" src="https://img.shields.io/github/license/HemantKArya/BloomeeTunes?style=for-the-badge&color=1881cc" > <img alt="GitHub Actions Workflow Status" src="https://img.shields.io/github/actions/workflow/status/HemantKArya/BloomeeTunes/checkout.yml?style=for-the-badge" > <br><img src=https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white > <img src=https://img.shields.io/badge/Android-3DDC84?style=for-the-badge&logo=android&logoColor=white /> <img src="https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black"/>
+<img alt="GitHub License" src="https://img.shields.io/github/license/HemantKArya/BloomeeTunes?style=for-the-badge&color=1881cc" > <img alt="GitHub Actions Workflow Status" src="https://img.shields.io/github/actions/workflow/status/HemantKArya/BloomeeTunes/checkout.yml?style=for-the-badge" > <br><img src=https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white > <img src=https://img.shields.io/badge/Android-3DDC84?style=for-the-badge&logo=android&logoColor=white /> <img src="https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black"/> <img src="https://img.shields.io/badge/iOS-000000?style=for-the-badge&logo=apple&logoColor=white"/>
 </p>
 
 
@@ -74,7 +74,7 @@
 
 <h2 align="center">📥 Download & Install</h2>
 
-<h4 align="center">Available for Android, Windows & Linux (Dev) 😍</h4>
+<h4 align="center">Available for Android, Windows, Linux (Dev) & iOS 😍</h4>
 
 <p align="center">
   <a href="https://github.com/HemantKArya/BloomeeTunes/releases/latest">
@@ -90,6 +90,28 @@
     <img alt="izzyondroid" src="https://gitlab.com/IzzyOnDroid/repo/-/raw/master/assets/IzzyOnDroidButtonGreyBorder.svg" height="45"/>
   </a>
 </p>
+
+### 🍎 iOS
+
+The iOS port runs the **same Flutter + Rust codebase** as the Android app — every feature
+(search, charts, playlists, lyrics, downloads, equalizer, crossfade, plugins, backup, themes,
+all 7 languages) works identically, with native lock-screen / Control-Centre media controls and
+background playback.
+
+iOS apps can't be shipped as plain downloads like APKs, so grab a build and install it yourself:
+
+1. **Unsigned IPA (recommended):** download `BloomeeTunes-iOS` from the
+   [Actions artifacts](https://github.com/VihaanAngaria/BloomeeTunes/actions/workflows/ios-build.yml)
+   and re-sign it with your Apple ID using [Sideloadly](https://sideloadly.io/) or
+   [AltStore](https://altstore.io/) (free Apple ID works, 7-day re-sign).
+2. **Build in Xcode:** clone the repo, open `ios/Runner.xcworkspace`, select your team under
+   *Signing & Capabilities*, and hit Run (needs a Mac + free/paid Apple Developer account).
+3. **Simulator:** unzip `BloomeeTunes_iOS_Simulator.app.zip` and run
+   `xcrun simctl install booted Bloomee.app && xcrun simctl launch booted ls.bloomee.musicplayer`.
+
+> Local music on iOS is imported through the folder picker (Files app / iCloud Drive) or by
+> dropping files into *On My iPhone → Bloomee → LocalMusic*; downloads and backups live in
+> *On My iPhone → Bloomee* (visible in the Files app).
 
 ---
 

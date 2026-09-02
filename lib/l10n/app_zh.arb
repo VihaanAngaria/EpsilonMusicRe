@@ -25,6 +25,7 @@
   "localMusicStorageAccessRequired": "需要存储访问权限",
   "localMusicStorageAccessDesc": "请授予权限以扫描并播放您设备上存储的音频文件。",
   "localMusicAddFolder": "添加音乐文件夹",
+  "localMusicImportMusic": "导入音乐",
   "localMusicScanNow": "立即扫描",
   "localMusicScanFailed": "扫描失败: {message}",
   "@localMusicScanFailed": { "placeholders": { "message": { "type": "String" } } },

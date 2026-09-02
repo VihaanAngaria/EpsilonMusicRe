@@ -25,6 +25,7 @@
   "localMusicStorageAccessRequired": "ストレージへのアクセス権限が必要です",
   "localMusicStorageAccessDesc": "デバイス内のオーディオファイルをスキャンして再生するために、アクセス権限を許可してください。",
   "localMusicAddFolder": "音楽フォルダーを追加",
+  "localMusicImportMusic": "音楽をインポート",
   "localMusicScanNow": "今すぐスキャン",
   "localMusicScanFailed": "スキャン失敗: {message}",
   "@localMusicScanFailed": { "placeholders": { "message": { "type": "String" } } },

@@ -102,10 +102,25 @@ class DownloaderCubit extends Cubit<DownloaderState> {
   }
 
   Future<Directory> _getDownloadDirectory() async {
-    if (Platform.isAndroid || Platform.isIOS) {
-      final directory = (await getDownloadsDirectory()) ??
-          await getApplicationDocumentsDirectory();
-      return directory;
+    if (Platform.isIOS) {
+      // iOS: downloads stay inside the sandbox. Documents is user-visible
+      // through the Files app (UIFileSharingEnabled is set in Info.plist),
+      // which is the iOS equivalent of a public downloads folder.
+      final docs = await getApplicationDocumentsDirectory();
+      final downloads = Directory(path.join(docs.path, 'Downloads'));
+      if (!downloads.existsSync()) {
+        await downloads.create(recursive: true);
+      }
+      return downloads;
+    }
+    if (Platform.isAndroid) {
+      try {
+        final directory = await getDownloadsDirectory();
+        if (directory != null) return directory;
+      } catch (_) {
+        // Downloads directory unavailable on this device — fall back below.
+      }
+      return await getApplicationDocumentsDirectory();
     }
     final p = await _settingsDao.getSettingStr(SettingKeys.downPathSetting);
     if (p != null) {

@@ -165,7 +165,16 @@ class DBProvider {
 
   /// Get the database backup file path.
   static Future<String> getDbBackupFilePath() async {
-    String backupPath = (await getDownloadsDirectory())?.path ?? appDocDir;
+    String? base;
+    try {
+      base = (await getDownloadsDirectory())?.path;
+    } catch (_) {
+      // getDownloadsDirectory() is unsupported on iOS — fall back to the
+      // app documents directory, which is user-visible through the Files
+      // app (UIFileSharingEnabled).
+    }
+    base ??= appDocDir;
+    String backupPath = base;
     backupPath =
         p.join(backupPath, 'bloomeeBackup', 'bloomee_backup_dbv3.json');
     return backupPath;

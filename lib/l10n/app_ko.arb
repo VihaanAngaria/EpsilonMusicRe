@@ -25,6 +25,7 @@
   "localMusicStorageAccessRequired": "저장공간 액세스 권한 필요",
   "localMusicStorageAccessDesc": "기기에 저장된 오디오 파일을 스캔하고 재생하려면 권한 허용이 필요합니다.",
   "localMusicAddFolder": "음악 폴더 추가",
+  "localMusicImportMusic": "음악 가져오기",
   "localMusicScanNow": "지금 스캔",
   "localMusicScanFailed": "스캔 실패: {message}",
   "@localMusicScanFailed": { "placeholders": { "message": { "type": "String" } } },

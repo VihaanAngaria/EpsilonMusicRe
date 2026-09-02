@@ -77,6 +77,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get localMusicAddFolder => '音楽フォルダーを追加';
 
   @override
+  String get localMusicImportMusic => '音楽をインポート';
+
+  @override
   String get localMusicScanNow => '今すぐスキャン';
 
   @override

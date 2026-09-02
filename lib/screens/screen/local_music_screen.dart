@@ -1,4 +1,5 @@
 import 'dart:developer';
+import 'dart:io';
 
 import 'package:Bloomee/blocs/local_music/cubit/local_music_cubit.dart';
 import 'package:Bloomee/blocs/media_player/bloomee_player_cubit.dart';
@@ -333,8 +334,11 @@ class _LocalMusicScreenState extends State<LocalMusicScreen> {
                       onPressed: () =>
                           context.read<LocalMusicCubit>().addFolderViaPicker(),
                       icon: const Icon(MingCute.new_folder_line, size: 20),
-                      label: Text(
-                          AppLocalizations.of(context)!.localMusicAddFolder),
+                      label: Text(Platform.isIOS
+                          ? AppLocalizations.of(context)!
+                              .localMusicImportMusic
+                          : AppLocalizations.of(context)!
+                              .localMusicAddFolder),
                       style: FilledButton.styleFrom(
                         backgroundColor: Default_Theme.accentColor2,
                         foregroundColor: Colors.white,
@@ -560,7 +564,9 @@ class _LocalMusicScreenState extends State<LocalMusicScreen> {
           ),
         if (!_isSearch && !LocalMusicService.isMobile)
           IconButton(
-            tooltip: AppLocalizations.of(context)!.localMusicAddFolder,
+            tooltip: Platform.isIOS
+                ? AppLocalizations.of(context)!.localMusicImportMusic
+                : AppLocalizations.of(context)!.localMusicAddFolder,
             icon: const Icon(MingCute.new_folder_line,
                 color: Default_Theme.primaryColor1),
             onPressed: () =>

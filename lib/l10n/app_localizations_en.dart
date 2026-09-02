@@ -77,6 +77,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get localMusicAddFolder => 'Add Music Folder';
 
   @override
+  String get localMusicImportMusic => 'Import Music';
+
+  @override
   String get localMusicScanNow => 'Scan Now';
 
   @override

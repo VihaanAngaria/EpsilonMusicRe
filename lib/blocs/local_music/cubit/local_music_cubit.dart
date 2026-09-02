@@ -65,12 +65,57 @@ class LocalMusicCubit extends Cubit<LocalMusicState> {
   }
 
   Future<void> addFolderViaPicker() async {
-    // Folder management only makes sense on desktop platforms.
-    if (LocalMusicService.isMobile || Platform.isIOS) return;
+    // Folder/file picking is used on desktop and iOS; Android discovers the
+    // whole library automatically via MediaStore.
+    if (LocalMusicService.isMobile) return;
+    if (Platform.isIOS) {
+      await importMusicFilesIOS();
+      return;
+    }
     final result = await FilePicker.platform.getDirectoryPath();
     if (result == null) return;
-    await _service.addFolder(result);
+    await addPickedFolder(result);
     await scan();
+  }
+
+  /// iOS primary local-music flow: multi-file audio pick.
+  ///
+  /// The system document picker imports the selected files into a temp
+  /// directory inside the sandbox (reliable for iCloud/Downloads/any
+  /// location); they are then moved into `<Documents>/LocalMusic/Imported`
+  /// and scanned. Folder-level access is unreliable on iOS — picked folders
+  /// are only readable during the current session.
+  Future<void> importMusicFilesIOS() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.audio,
+      allowMultiple: true,
+    );
+    if (result == null || result.files.isEmpty) return;
+    final paths =
+        result.files.where((f) => f.path != null).map((f) => f.path!).toList();
+    if (paths.isEmpty) return;
+    try {
+      await _service.importAudioFilesFromIOS(paths);
+    } catch (e, stack) {
+      log('iOS import failed: $e\n$stack', name: 'LocalMusicCubit');
+      emit(LocalMusicError(e.toString()));
+      return;
+    }
+    await scan();
+  }
+
+  /// Registers a folder the user just picked with the system picker.
+  ///
+  /// On iOS the audio files are copied into the app sandbox first
+  /// (LocalMusicService.importFolderFromIOS) because iOS revokes access to
+  /// picked folders when the app restarts. On desktop the picked folder is
+  /// registered as-is.
+  Future<void> addPickedFolder(String path) async {
+    if (Platform.isIOS) {
+      await _service.importFolderFromIOS(path);
+    } else {
+      await _service.addFolder(path);
+    }
   }
 
   Future<void> removeFolder(String path) async {

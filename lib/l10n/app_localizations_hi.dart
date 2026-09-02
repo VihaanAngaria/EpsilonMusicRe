@@ -77,6 +77,9 @@ class AppLocalizationsHi extends AppLocalizations {
   String get localMusicAddFolder => 'म्यूज़िक फ़ोल्डर जोड़ें';
 
   @override
+  String get localMusicImportMusic => 'संगीत आयात करें';
+
+  @override
   String get localMusicScanNow => 'अभी स्कैन करें';
 
   @override

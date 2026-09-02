@@ -75,6 +75,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get localMusicAddFolder => '添加音乐文件夹';
 
   @override
+  String get localMusicImportMusic => '导入音乐';
+
+  @override
   String get localMusicScanNow => '立即扫描';
 
   @override

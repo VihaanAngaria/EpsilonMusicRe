@@ -240,6 +240,12 @@ abstract class AppLocalizations {
   /// **'Add Music Folder'**
   String get localMusicAddFolder;
 
+  /// No description provided for @localMusicImportMusic.
+  ///
+  /// In en, this message translates to:
+  /// **'Import Music'**
+  String get localMusicImportMusic;
+
   /// No description provided for @localMusicScanNow.
   ///
   /// In en, this message translates to:

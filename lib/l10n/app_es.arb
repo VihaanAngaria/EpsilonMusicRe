@@ -25,6 +25,7 @@
   "localMusicStorageAccessRequired": "Acceso al almacenamiento necesario",
   "localMusicStorageAccessDesc": "Por favor, concede permiso para escanear y reproducir los archivos de audio almacenados en tu dispositivo.",
   "localMusicAddFolder": "Añadir carpeta de música",
+  "localMusicImportMusic": "Importar música",
   "localMusicScanNow": "Escanear ahora",
   "localMusicScanFailed": "Error al escanear: {message}",
   "@localMusicScanFailed": { "placeholders": { "message": { "type": "String" } } },

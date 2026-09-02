@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:Bloomee/blocs/media_player/bloomee_player_cubit.dart';
 import 'package:Bloomee/blocs/settings_cubit/cubit/settings_cubit.dart';
@@ -275,7 +276,11 @@ class _EqualizerViewState extends State<EqualizerView>
     final l10n = AppLocalizations.of(context)!;
     final bands = _engine.equalizerBands;
     final isEnabled = _engine.equalizerEnabled;
-    final isBuiltinMode = _eqSource == EqSourceValues.builtin;
+    // iOS has no system-wide equalizer API exposed to third-party apps, so
+    // the "Device EQ" source concept (Android/OEM EQ) does not apply there —
+    // always use the built-in equalizer on iOS.
+    final isBuiltinMode =
+        Platform.isIOS || _eqSource == EqSourceValues.builtin;
     const accent = Default_Theme.accentColor2;
 
     return Scaffold(
@@ -318,9 +323,11 @@ class _EqualizerViewState extends State<EqualizerView>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // FIX H-01: EQ Source selection — 'Built-in' or 'Device'
-                  _buildSectionHeader('EQ SOURCE'),
-                  Padding(
+                  // FIX H-01: EQ Source selection — 'Built-in' or 'Device'.
+                  // Hidden on iOS (no system EQ API for third-party apps).
+                  if (!Platform.isIOS) ...[
+                    _buildSectionHeader('EQ SOURCE'),
+                    Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Container(
                       decoration: BoxDecoration(
@@ -395,6 +402,7 @@ class _EqualizerViewState extends State<EqualizerView>
                       ),
                     ),
                   ),
+                  ],
                   const SizedBox(height: 24),
 
                   // Only show built-in EQ controls when in builtin mode

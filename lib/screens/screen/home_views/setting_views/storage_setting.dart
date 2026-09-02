@@ -100,7 +100,7 @@ class BackupSettings extends StatelessWidget {
                             if (value != null) {
                               SnackbarService.showMessage(
                                   l10n.storageBackupCreatedAt(value));
-                              if (Platform.isAndroid) {
+                              if (Platform.isAndroid || Platform.isIOS) {
                                 try {
                                   SharePlus.instance
                                       .share(ShareParams(
@@ -137,7 +137,7 @@ class BackupSettings extends StatelessWidget {
                             if (value != null) {
                               SnackbarService.showMessage(
                                   l10n.storageBackupCreatedAt(value));
-                              if (Platform.isAndroid) {
+                              if (Platform.isAndroid || Platform.isIOS) {
                                 try {
                                   SharePlus.instance
                                       .share(ShareParams(

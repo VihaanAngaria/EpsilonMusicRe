@@ -214,37 +214,78 @@ Future<Map<String, dynamic>> githubUpdate(
 
 /// New public API: try GitHub first, then SourceForge; return a consistent map.
 Future<Map<String, dynamic>> getAppUpdates() async {
-  // Try GitHub first, then SourceForge, produce an `updates` map and attach changelogs.
+  // iOS builds are not published to GitHub/SourceForge releases — updates
+  // arrive by rebuilding/sideloading or via TestFlight. The in-app updater
+  // therefore reports "up to date" on iOS and only surfaces the changelog.
   Map<String, dynamic> updates;
-  try {
-    updates = await githubUpdate();
-  } catch (e) {
-    log('GitHub check failed, trying SourceForge: $e', name: 'UpdaterTools');
+  if (Platform.isIOS) {
+    updates = await _iosNoUpdateStatus();
+  } else {
+    // Try GitHub first, then SourceForge, produce an `updates` map.
     try {
-      updates = await sourceforgeUpdate();
-    } catch (e2) {
-      log('SourceForge check failed: $e2', name: 'UpdaterTools');
-      // Final fallback: return structured failure map with current info
+      updates = await githubUpdate();
+    } catch (e) {
+      log('GitHub check failed, trying SourceForge: $e', name: 'UpdaterTools');
       try {
-        final packageInfo = await PackageInfo.fromPlatform();
-        updates = {
-          'results': false,
-          'error': 'Failed to check remote releases',
-          'currVer': packageInfo.version,
-          'currBuild': packageInfo.buildNumber,
-          'source': 'none',
-        };
-      } catch (e3) {
-        updates = {
-          'results': false,
-          'error':
-              'Failed to check remote releases and failed to read local package info',
-          'source': 'none',
-        };
+        updates = await sourceforgeUpdate();
+      } catch (e2) {
+        log('SourceForge check failed: $e2', name: 'UpdaterTools');
+        // Final fallback: return structured failure map with current info
+        try {
+          final packageInfo = await PackageInfo.fromPlatform();
+          updates = {
+            'results': false,
+            'error': 'Failed to check remote releases',
+            'currVer': packageInfo.version,
+            'currBuild': packageInfo.buildNumber,
+            'source': 'none',
+          };
+        } catch (e3) {
+          updates = {
+            'results': false,
+            'error':
+                'Failed to check remote releases and failed to read local package info',
+            'source': 'none',
+          };
+        }
       }
     }
   }
 
+  await _attachChangelog(updates);
+
+  return updates;
+}
+
+/// iOS "no in-app update" status: reports the installed version as current
+/// so the update dialog never triggers, but keeps the release page URL for
+/// manual reference.
+Future<Map<String, dynamic>> _iosNoUpdateStatus() async {
+  try {
+    final packageInfo = await PackageInfo.fromPlatform();
+    return {
+      'source': 'ios',
+      'results': false,
+      'newVer': packageInfo.version,
+      'newBuild': packageInfo.buildNumber,
+      'download_url':
+          'https://github.com/HemantKArya/BloomeeTunes/releases/latest',
+      'currVer': packageInfo.version,
+      'currBuild': packageInfo.buildNumber,
+    };
+  } catch (e) {
+    log('Failed to read package info on iOS: $e', name: 'UpdaterTools');
+    return {
+      'source': 'ios',
+      'results': false,
+      'error': 'Failed to read local package info',
+    };
+  }
+}
+
+/// Attaches the "What's new" changelog when the installed version matches
+/// the latest version and the changelog has not been read yet.
+Future<void> _attachChangelog(Map<String, dynamic> updates) async {
   try {
     // Contains the latest changelog read by the user. [eg. v2.11.6+171] (can be null)
     final readChangelogs = await SettingsDAO(DBProvider.db)
@@ -266,10 +307,6 @@ Future<Map<String, dynamic>> getAppUpdates() async {
     log('Attaching changelog failed: $e\n$st', name: 'UpdaterTools');
     updates['changelogs'] = null;
   }
-
-  // log('Update check completed: $updates', name: 'UpdaterTools');
-
-  return updates;
 }
 
 /// Fetch the project's CHANGELOG.md from the hosted GitHub Pages site.

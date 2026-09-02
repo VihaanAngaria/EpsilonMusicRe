@@ -1,0 +1,98 @@
+name: "iOS Build"
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**/*.md'
+      - 'LICENSE'
+      - 'fastlane/**'
+      - 'ghpage/**'
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - '**/*.md'
+      - 'LICENSE'
+      - 'fastlane/**'
+      - 'ghpage/**'
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    name: Build iOS App (unsigned)
+    runs-on: macos-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.35.4'
+          channel: 'stable'
+          cache: true
+
+      - name: Setup Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios-sim
+
+      - name: Cache Rust Build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "rust"
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build iOS App (release, unsigned)
+        run: flutter build ios --release --no-codesign --build-number ${{ github.run_number }}
+
+      - name: Assemble unsigned IPA
+        run: |
+          APP_PATH="build/ios/iphoneos/Runner.app"
+          if [ ! -d "$APP_PATH" ]; then
+            echo "::error::Runner.app not found at $APP_PATH"
+            exit 1
+          fi
+          mkdir -p build/ios/ipa/Payload
+          cp -R "$APP_PATH" build/ios/ipa/Payload/Bloomee.app
+          cd build/ios/ipa
+          zip -qry BloomeeTunes_iOS_unsigned.ipa Payload
+          shasum -a 256 BloomeeTunes_iOS_unsigned.ipa > BloomeeTunes_iOS_unsigned.ipa.sha256
+          echo "IPA size: $(du -h BloomeeTunes_iOS_unsigned.ipa | cut -f1)"
+
+      - name: Build iOS Simulator App
+        run: flutter build ios --debug --simulator --build-number ${{ github.run_number }}
+
+      - name: Zip simulator app
+        run: |
+          cd build/ios/iphonesimulator
+          zip -qry "$GITHUB_WORKSPACE/build/ios/BloomeeTunes_iOS_Simulator.app.zip" Runner.app
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: BloomeeTunes-iOS
+          path: |
+            build/ios/ipa/BloomeeTunes_iOS_unsigned.ipa
+            build/ios/ipa/BloomeeTunes_iOS_unsigned.ipa.sha256
+            build/ios/BloomeeTunes_iOS_Simulator.app.zip
+          if-no-files-found: error
+
+      - name: Build Summary
+        run: |
+          cat <<EOF >> $GITHUB_STEP_SUMMARY
+          ## 🍎 iOS Build (unsigned, no Apple account needed)
+
+          | Artifact | How to use |
+          |---|---|
+          | \`BloomeeTunes_iOS_unsigned.ipa\` | Re-sign & sideload with your Apple ID using Sideloadly / AltStore, or open the repo in Xcode and run on device |
+          | \`BloomeeTunes_iOS_Simulator.app.zip\` | Unzip, then \`xcrun simctl install booted Bloomee.app\` and \`xcrun simctl launch booted ls.bloomee.musicplayer\` |
+
+          - Flutter 3.35.4 + Rust (cargokit, aarch64-apple-ios) — build number ${{ github.run_number }}
+          - Background audio, lock-screen/Control-Centre controls and all Android features enabled
+          EOF

@@ -81,6 +81,11 @@ class _DownloadSettingsState extends State<DownloadSettings> {
       ),
       body: BlocBuilder<SettingsCubit, SettingsState>(
         builder: (context, state) {
+          // Android and iOS both use a fixed, platform-managed download
+          // directory (public Downloads on Android, Documents/Downloads in
+          // the sandbox on iOS); custom folders are a desktop-only option.
+          final bool canPickFolder =
+              !Platform.isAndroid && !Platform.isIOS;
           return ListView(
             physics: const BouncingScrollPhysics(),
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -109,10 +114,9 @@ class _DownloadSettingsState extends State<DownloadSettings> {
                     icon: MingCute.folder_fill,
                     title: l10n.downloadSettingFolder,
                     subtitle: state.downPath,
-                    roundBottom: Platform.isAndroid,
-                    onTap: Platform.isAndroid
-                        ? () {}
-                        : () async {
+                    roundBottom: !canPickFolder,
+                    onTap: canPickFolder
+                        ? () async {
                             FilePicker.platform
                                 .getDirectoryPath()
                                 .then((value) {
@@ -122,9 +126,10 @@ class _DownloadSettingsState extends State<DownloadSettings> {
                                     .setDownPath(value);
                               }
                             });
-                          },
+                          }
+                        : () {},
                   ),
-                  if (!Platform.isAndroid) ...[
+                  if (canPickFolder) ...[
                     const SettingDivider(),
                     SettingNavTile(
                       icon: MingCute.refresh_1_line,

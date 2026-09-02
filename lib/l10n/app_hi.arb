@@ -25,6 +25,7 @@
   "localMusicStorageAccessRequired": "स्टोरेज की अनुमति चाहिए",
   "localMusicStorageAccessDesc": "कृपया अपने डिवाइस पर मौजूद ऑडियो फ़ाइलों को स्कैन करने और चलाने की अनुमति दें।",
   "localMusicAddFolder": "म्यूज़िक फ़ोल्डर जोड़ें",
+  "localMusicImportMusic": "संगीत आयात करें",
   "localMusicScanNow": "अभी स्कैन करें",
   "localMusicScanFailed": "स्कैन विफल: {message}",
   "@localMusicScanFailed": { "placeholders": { "message": { "type": "String" } } },

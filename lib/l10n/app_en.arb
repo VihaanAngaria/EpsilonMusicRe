@@ -25,6 +25,7 @@
   "localMusicStorageAccessRequired": "Storage Access Required",
   "localMusicStorageAccessDesc": "Please grant permission to scan and play audio files stored on your device.",
   "localMusicAddFolder": "Add Music Folder",
+  "localMusicImportMusic": "Import Music",
   "localMusicScanNow": "Scan Now",
   "localMusicScanFailed": "Scan failed: {message}",
   "@localMusicScanFailed": { "placeholders": { "message": { "type": "String" } } },

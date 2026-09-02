@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:developer';
+import 'dart:io';
 import 'package:Bloomee/core/constants/setting_keys.dart';
 import 'package:Bloomee/core/constants/cache_keys.dart';
 import 'package:Bloomee/repository/bloomee/settings_repository.dart';
@@ -8,6 +9,7 @@ import 'package:Bloomee/services/db/db_provider.dart';
 import 'package:Bloomee/utils/country_info.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 part 'settings_state.dart';
 
@@ -297,6 +299,14 @@ class SettingsCubit extends Cubit<SettingsState> {
   // rather than throwing and leaving settingsReady permanently false.
   Future<String> _resolveDownPath() async {
     try {
+      if (Platform.isIOS) {
+        // Mirror DownloaderCubit._getDownloadDirectory(): iOS downloads go
+        // to <Documents>/Downloads, visible through the Files app.
+        final docs = await getApplicationDocumentsDirectory();
+        final path = p.join(docs.path, 'Downloads');
+        await _settingsRepo.putSettingStr(SettingKeys.downPathSetting, path);
+        return path;
+      }
       final saved =
           await _settingsRepo.getSettingStr(SettingKeys.downPathSetting);
       if (saved != null) return saved;
@@ -490,10 +500,19 @@ class SettingsCubit extends Cubit<SettingsState> {
   }
 
   Future<void> resetDownPath() async {
-    final path = ((await getDownloadsDirectory()) ??
-            (await getApplicationDocumentsDirectory()))
-        .path;
-    setDownPath(path);
+    if (Platform.isIOS) {
+      final docs = await getApplicationDocumentsDirectory();
+      setDownPath(p.join(docs.path, 'Downloads'));
+      return;
+    }
+    try {
+      final path = ((await getDownloadsDirectory()) ??
+              (await getApplicationDocumentsDirectory()))
+          .path;
+      setDownPath(path);
+    } catch (_) {
+      // Unavailable on this platform — keep the current path.
+    }
   }
 
   Future<void> putSettingStr(String key, String value) async =>
